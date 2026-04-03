@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#c8b6ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="./icon.png">
+<link rel="manifest" href="./manifest.json">
+<title>小怪兽背单词 🐉</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="./css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body class="antialiased">
+<div id="pts"></div>
+
+<!-- 顶部状态栏 -->
+<div class="bar max-w-2xl mx-auto md:mt-4">
+  <div class="bar-left">
+    <span class="pet" id="petIco">🥚</span>
+    <div class="meta">
+      <div class="meta-name" id="petName">小蛋蛋 Lv.1</div>
+      <div class="exp-wrap"><div class="exp-bar" id="expBar" style="width:0%"></div></div>
+      <div class="exp-txt" id="expTxt">0 / 100 EXP</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <button class="accent-btn" id="accentBtn" onclick="toggleAccent()" title="切换发音">🇺🇸 美式</button>
+    <span class="user-badge" id="userBadge">👦 宝宝1</span>
+    <button class="gear" onclick="openGear()" title="家长模式">⚙️</button>
+  </div>
+</div>
+
+<!-- 数据统计 -->
+<div class="stats max-w-2xl mx-auto">
+  <div class="chip"><div class="chip-n" id="sTodo">0</div><div class="chip-l">今日剩余</div></div>
+  <div class="chip"><div class="chip-n" id="sTotal">0</div><div class="chip-l">本册单词</div></div>
+  <div class="chip"><div class="chip-n" id="sMast">0</div><div class="chip-l">已掌握</div></div>
+</div>
+<div class="max-w-2xl mx-auto relative z-10 bg-white/65 backdrop-blur-md border border-white/90 rounded-2xl py-2 px-4 shadow-sm text-sm font-bold text-purple-700 w-full text-center">
+  📖 当前词库：<span id="curBookLabel">默认词库</span>
+</div>
+
+<!-- 主卡片 -->
+<div class="card-wrap max-w-2xl mx-auto flex-grow flex flex-col justify-center">
+  <div class="card md:min-h-[400px]" id="card" onclick="cardTap()">
+    <div class="lv-badge" id="lvBadge">Lv.0</div>
+    <button class="snd-btn" id="sndBtn" onclick="speak(event)">🔊</button>
+    <button class="prev-btn" id="prevBtn" onclick="prevWord(event)">←</button>
+    <span class="w-emoji md:text-[7rem]" id="wEmo">📚</span>
+    <div class="w-en md:text-6xl" id="wEn">准备中…</div>
+    <div class="w-ph md:text-2xl" id="wPh"></div>
+    <div class="w-zh off md:text-3xl" id="wZh">—</div>
+    <div class="hint" id="hint">👆 点击卡片显示图片和中文</div>
+    <div class="dots" id="dots"></div>
+  </div>
+</div>
+
+<!-- 操作按钮 -->
+<div class="acts max-w-2xl mx-auto mb-6" id="acts">
+  <button class="a forgot" onclick="act('forgot')"><span class="ic">✕</span><span class="lb">忘了</span></button>
+  <button class="a fuzzy"  onclick="act('fuzzy')"><span class="ic">?</span><span class="lb">模糊</span></button>
+  <button class="a know"   onclick="act('know')"><span class="ic">✓</span><span class="lb">认识</span></button>
+  <button class="a master" onclick="act('master')"><span class="ic">⭐</span><span class="lb">掌握</span></button>
+</div>
+
+<!-- 家长控制台 -->
+<div class="ov" id="ov" onclick="ovClick(event)">
+  <div class="modal">
+    <div class="m-ttl">👨‍👩‍👧 家长控制台</div>
+    <p style="font-size:.83rem;color:#666;margin-bottom:10px;font-weight:700">👦 用户管理</p>
+    <div id="userCards"></div>
+    <hr class="dvd"/>
+    <p style="font-size:.83rem;color:#666;margin-bottom:8px;font-weight:700">📚 词库管理</p>
+    <div class="btabs" id="bookTabs"></div>
+    <div class="book-acts">
+      <button class="mb pri" onclick="createBook()">➕ 新建</button>
+      <button class="mb sec" onclick="renameBook()">✏️ 重命名</button>
+      <button class="mb red" onclick="deleteBook()">🗑️ 删除</button>
+    </div>
+    <hr class="dvd"/>
+    <p class="m-hint">格式：英文,中文（回车换行）<br>例：apple,苹果</p>
+    <textarea class="m-ta" id="ta" placeholder="apple,苹果"></textarea>
+    <div id="mmsg"></div>
+    <button class="mb pri" onclick="importWords()">📥 导入单词</button>
+    <hr class="dvd"/>
+    <p style="font-size:.83rem;color:#666;margin-bottom:8px">📖 <b id="wcntBook">默认</b>（共 <b id="wcnt">0</b> 个）</p>
+    <div class="wl" id="wlist"></div>
+    <button class="mb sec" onclick="closeOv()">关闭</button>
+  </div>
+</div>
+
+<!-- 升级动画弹窗 -->
+<div class="lut" id="lut">
+  <span class="lut-ico" id="lutIco">🐣</span>
+  <div class="lut-ttl" id="lutTtl">宠物进化了！</div>
+  <div class="lut-sub" id="lutSub">继续加油～</div>
+</div>
+
+<!-- 🌟 极简全UI系统弹窗(代替系统自带报错) -->
+<div id="sysModal" class="fixed inset-0 bg-slate-900/40 z-[9999] hidden flex-col items-center justify-center px-4 backdrop-blur-sm transition-opacity">
+  <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform transition-transform" id="sysModalContent">
+      <h3 id="sysModalTitle" class="text-lg font-bold text-slate-800 mb-4 whitespace-pre-wrap leading-relaxed"></h3>
+      <input type="text" id="sysModalInput" class="hidden w-full border-2 border-indigo-100 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:border-indigo-400 font-bold text-slate-700 bg-slate-50">
+      <div class="flex gap-3 mt-4">
+          <button id="sysModalCancel" class="hidden flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold active:scale-95 transition-all text-sm">取消</button>
+          <button id="sysModalConfirm" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold shadow-lg shadow-indigo-200 active:scale-95 transition-all text-sm">确定</button>
+      </div>
+  </div>
+</div>
+
+<script src="./js/app.js"></script>
+</body>
+</html>
