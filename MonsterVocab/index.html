@@ -17,9 +17,9 @@
 <body class="antialiased">
 <div id="pts"></div>
 
-<!-- 顶部状态栏 -->
-<div class="bar max-w-2xl mx-auto md:mt-4">
-  <div class="bar-left">
+<!-- 顶部状态栏 (修复手机挤压问题) -->
+<div class="bar max-w-2xl mx-auto md:mt-4 flex flex-wrap gap-y-3 justify-between items-center px-4 py-3">
+  <div class="bar-left flex-shrink-0">
     <span class="pet" id="petIco">🥚</span>
     <div class="meta">
       <div class="meta-name" id="petName">小蛋蛋 Lv.1</div>
@@ -27,10 +27,10 @@
       <div class="exp-txt" id="expTxt">0 / 100 EXP</div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:6px">
-    <button class="accent-btn" id="accentBtn" onclick="toggleAccent()" title="切换发音">🇺🇸 美式</button>
-    <span class="user-badge" id="userBadge">👦 宝宝1</span>
-    <button class="gear" onclick="openGear()" title="家长模式">⚙️</button>
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <button class="accent-btn text-xs md:text-sm" id="accentBtn" onclick="toggleAccent()" title="切换发音">🇺🇸 美式</button>
+    <span class="user-badge text-xs md:text-sm" id="userBadge">👦 宝宝1</span>
+    <button class="gear text-2xl" onclick="openGear()" title="家长模式">⚙️</button>
   </div>
 </div>
 
