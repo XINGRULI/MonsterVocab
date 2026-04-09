@@ -23,13 +23,13 @@ keyf.innerHTML = `
 document.head.appendChild(keyf);
 
 /* ═══════════════════════════════════════════════
-   3. 维基百科自动配图溯源器 (保持上版特性)
+   3. 维基图库溯源引擎
    ═══════════════════════════════════════════════ */
 const EMOJI = { apple:'🍎',banana:'🍌',cat:'🐱',dog:'🐶',elephant:'🐘',fish:'🐟',tiger:'🐅',lion:'🐅',car:'🚗',bus:'🚌' }; function autoEmoji(en) { return EMOJI[en.toLowerCase().trim()] || '📝'; }
 async function fetchWikiImage(word) { try { const queryWord = encodeURIComponent(word.trim().toLowerCase()); const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${queryWord}&prop=pageimages&format=json&pithumbsize=400&origin=*`); const data = await res.json(); const pages = data.query.pages; const pageId = Object.keys(pages)[0]; if (pageId !== '-1' && pages[pageId].thumbnail) { return pages[pageId].thumbnail.source; } } catch(e) {} return null; }
 
 /* ═══════════════════════════════════════════════
-   4. 全局常量、用户、词库
+   4. 全局核心引擎：玩家数据排队机制
    ═══════════════════════════════════════════════ */
 let ttsAccent = parseInt(localStorage.getItem('mw_accent') || '2'); function toggleAccent() { ttsAccent = ttsAccent === 2 ? 1 : 2; localStorage.setItem('mw_accent', ttsAccent); document.getElementById('accentBtn').textContent = ttsAccent === 2 ? 'US' : 'UK'; }
 const PET_STAGES = [ { level: 1, text: 'Lv.1 魔法神蛋', ico: '🥚', sub: '刚出生，急需营养～', threshold: 0 }, { level: 2, text: 'Lv.2 贪吃小恐龙', ico: '🦖', sub: '破壳啦！解锁商店装备！', threshold: 50 }, { level: 3, text: 'Lv.3 快乐独角兽', ico: '🦄', sub: '神奇魔法觉醒！', threshold: 3000 }, { level: 4, text: 'Lv.4 巡洋大头鲨', ico: '🦈', sub: '大富翁！金币收益翻倍！', threshold: 8000 }, { level: 5, text: 'Lv.5 许愿神龙', ico: '🐉', sub: '巅峰连胜！去找爸妈许愿！', threshold: 25000 } ]; const FULLNESS_CAP = 300; 
@@ -50,12 +50,12 @@ function interval(lvl) { if (lvl === 1) return 12 * 3600000; if (lvl === 2) retu
 function getPetStage() { let cs = PET_STAGES[0]; for(let i = 0; i < PET_STAGES.length; i++) { if(player.totalFed >= PET_STAGES[i].threshold) cs = PET_STAGES[i]; } return cs; }
 function act(action) { if (qi >= queue.length) return; const idx = queue[qi]; const w = words[idx]; const isNewWord = (w.level === 0); const stage = getPetStage(); const coinMult = (stage.level >= 4) ? 2 : 1; if (action === 'know' || action === 'master') { if (isNewWord) player.todayNew = (player.todayNew || 0) + 1; else player.todayRev = (player.todayRev || 0) + 1; if (action === 'know') { w.level = Math.max(1, w.level + 1); w.nextReview = Date.now() + interval(w.level); earnCoins(2 * coinMult); } else { w.level = 5; w.nextReview = Date.now() + 7 * 24 * 3600000; earnCoins(10 * coinMult); } } else { if (action === 'fuzzy') { w.level = Math.max(1, w.level); if(stage.level >= 3) earnCoins(1); } else { w.level = 0; } queue.push(idx); } saveW(); qi++; setTimeout(showCard, 100); }
 function earnCoins(amount) { player.coins += amount; saveP(); renderPet(); const el = document.createElement('div'); el.textContent = `+${amount}💰`; el.style.cssText = 'position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);color:#eab308;font-weight:900;font-size:2rem;text-shadow:0 2px 4px rgba(0,0,0,0.2);z-index:99;animation:flyup 0.8s ease-out forwards;pointer-events:none;'; document.body.appendChild(el); setTimeout(() => el.remove(), 800); }
-async function processDailyCheckIn() { const todayStr = new Date().toDateString(); if (player.lastCheckIn === todayStr) return; const yesterday = new Date(Date.now() - 86400000).toDateString(); if (player.lastCheckIn === yesterday) { player.streak = (player.streak || 0) + 1; } else { player.streak = 1; } player.lastCheckIn = todayStr; let bonus = 10; if(player.streak === 2) bonus = 30; if(player.streak >= 3) bonus = player.ownsCrown ? 80 : 50; player.coins += bonus; saveP(); renderPet(); setTimeout(() => { Dialog.alert(`<span class="text-3xl">🔥</span> 连胜 <b>${player.streak}</b> 天！<br><br>当此获得：<b class="text-yellow-600">+${bonus} 金币</b>！<br><span class="text-xs text-slate-500">${player.ownsCrown ? '👑 皇家理财特权生效中' : ''}</span>`); }, 1500); }
+async function processDailyCheckIn() { const todayStr = new Date().toDateString(); if (player.lastCheckIn === todayStr) return; const yesterday = new Date(Date.now() - 86400000).toDateString(); if (player.lastCheckIn === yesterday) { player.streak = (player.streak || 0) + 1; } else { player.streak = 1; } player.lastCheckIn = todayStr; let bonus = 10; if(player.streak === 2) bonus = 30; if(player.streak >= 3) bonus = player.ownsCrown ? 80 : 50; player.coins += bonus; saveP(); renderPet(); setTimeout(() => { Dialog.alert(`<span class="text-3xl">🔥</span> 连胜 <b>${player.streak}</b> 天！<br><br>获得：<b class="text-yellow-600">+${bonus} 金币</b>！<br><span class="text-xs text-slate-500">${player.ownsCrown ? '👑 皇家理财生效' : ''}</span>`); }, 1500); }
 
 const SHOP_ITEMS = [ { id: 'f1', type: 'food', icon: '🍪', name: '怪兽小饼干', desc: '充饥变大', price: 10, val: 20 }, { id: 'f2', type: 'food', icon: '🍎', name: '魔法红苹果', desc: '大量充饥', price: 25, val: 60 }, { id: 'o1', type: 'o2o',  icon: '📺', name: '10 分钟动画片', desc: '兑现实特权', price: 80 }, { id: 'o2', type: 'o2o',  icon: '⭐', name: '1颗家庭积分星', desc: '换实物大奖', price: 100 }, { id: 'c1', type: 'crown',icon: '👑', name: '永久国王皇冠', desc: '全勤暴增神装', price: 800 } ];
 function openShop() { document.getElementById('shopCoinDisplay').textContent = player.coins; const list = document.getElementById('shopRenderArea'); list.innerHTML = ''; SHOP_ITEMS.forEach(it => { if(it.type === 'crown' && player.ownsCrown) return; const canBuy = player.coins >= it.price; const div = document.createElement('div'); div.className = 'shop-item'; div.innerHTML = `<div class="flex items-center gap-3"><div class="text-3xl">${it.icon}</div><div><div class="font-bold text-slate-800">${it.name}</div><div class="text-xs text-slate-500">${it.desc}</div></div></div><button class="buy-btn ${canBuy?'':'opacity-50 cursor-not-allowed'}" ${canBuy ? `onclick="buyItem('${it.id}')"` : 'disabled'}>${it.price} 币</button>`; list.appendChild(div); }); document.getElementById('shopOv').classList.add('open'); }
 function closeShop() { document.getElementById('shopOv').classList.remove('open'); }
-async function buyItem(id) { const item = SHOP_ITEMS.find(x => x.id === id); if(player.coins < item.price) return; if(item.type === 'food') { if(player.fullness >= FULLNESS_CAP) { await Dialog.alert("✋ 怪兽肚子圆滚滚啦，吃不下啦！"); return; } let oS = getPetStage(); player.coins -= item.price; let eat = Math.min(item.val, FULLNESS_CAP - player.fullness); player.fullness += eat; player.totalFed += eat; saveP(); renderPet(); closeShop(); const fEl = document.createElement('div'); fEl.textContent = item.icon; fEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:5rem;z-index:999;animation:dropFade 1s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events:none;'; document.body.appendChild(fEl); let nS = getPetStage(); setTimeout(async () => { fEl.remove(); if(nS.level > oS.level) { document.getElementById('lutIco').textContent = nS.ico; document.getElementById('lutTtl').textContent = nS.text + ' 降临！'; document.getElementById('lutSub').textContent = nS.sub; document.getElementById('lut').classList.add('show'); try { confetti({particleCount:80, spread:100, origin:{y:.5}, colors:['#FFB3C6','#C8B6FF','#BBD0FF','#FFEAA7']}); } catch(e){} } else { await Dialog.show(`😋 吃的好饱！<br>当前进化进度: ${player.totalFed}`, 'alert'); } }, 1100); } else if(item.type === 'o2o') { if(await Dialog.confirm(`⚠️ 消耗 ${item.price} 金币兑换【${item.name}】？`)) { player.coins -= item.price; saveP(); renderPet(); closeShop(); try { confetti({particleCount:150, zIndex: 9999, spread:120, origin:{y:.5}}); } catch(e){} await Dialog.alert(`<span class="text-4xl block mb-4 mt-2">🎉 兑换成功！</span><br><b class="text-rose-600 outline px-2 shadow">请向爸妈展示本界面核销！</b><br><br>【${item.name}】`); } } else if(item.type === 'crown') { if(await Dialog.confirm(`👑 800币购买皇冠？（变发财机）`)) { player.coins -= item.price; player.ownsCrown = true; saveP(); renderPet(); closeShop(); try { confetti({particleCount:200, zIndex: 9999, spread:160, origin:{y:.5}}); } catch(e){} await Dialog.alert(`👑👑👑<br>王登基了！<br>每天全勤飙涨！`); } } }
+async function buyItem(id) { const item = SHOP_ITEMS.find(x => x.id === id); if(player.coins < item.price) return; if(item.type === 'food') { if(player.fullness >= FULLNESS_CAP) { await Dialog.alert("✋ 肚子圆滚滚啦，吃不下啦！"); return; } let oS = getPetStage(); player.coins -= item.price; let eat = Math.min(item.val, FULLNESS_CAP - player.fullness); player.fullness += eat; player.totalFed += eat; saveP(); renderPet(); closeShop(); const fEl = document.createElement('div'); fEl.textContent = item.icon; fEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:5rem;z-index:999;animation:dropFade 1s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events:none;'; document.body.appendChild(fEl); let nS = getPetStage(); setTimeout(async () => { fEl.remove(); if(nS.level > oS.level) { document.getElementById('lutIco').textContent = nS.ico; document.getElementById('lutTtl').textContent = nS.text + ' 降临！'; document.getElementById('lutSub').textContent = nS.sub; document.getElementById('lut').classList.add('show'); try { confetti({particleCount:80, spread:100, origin:{y:.5}, colors:['#FFB3C6','#C8B6FF','#BBD0FF','#FFEAA7']}); } catch(e){} } else { await Dialog.show(`😋 吃饱了！<br>当前总重: ${player.totalFed}`, 'alert'); } }, 1100); } else if(item.type === 'o2o') { if(await Dialog.confirm(`⚠️ 消 ${item.price} 金币兑换【${item.name}】？`)) { player.coins -= item.price; saveP(); renderPet(); closeShop(); try { confetti({particleCount:150, zIndex: 9999, spread:120, origin:{y:.5}}); } catch(e){} await Dialog.alert(`<span class="text-4xl block mb-4 mt-2">🎉 兑换成功！</span><br><b class="text-rose-600 outline px-2 shadow">请向爸妈展示本界面核销！</b><br><br>【${item.name}】`); } } else if(item.type === 'crown') { if(await Dialog.confirm(`👑 800币购买皇冠发财机？`)) { player.coins -= item.price; player.ownsCrown = true; saveP(); renderPet(); closeShop(); try { confetti({particleCount:200, zIndex: 9999, spread:160, origin:{y:.5}}); } catch(e){} await Dialog.alert(`👑👑👑<br>王登基了！`); } } }
 
 /* ═══════════════════════════════════════════════
    6. 🔊 纯净发音引擎
@@ -66,7 +66,7 @@ async function autoSpeakZh(text) { return new Promise((r) => { const url = `http
 async function speak(e) { e.stopPropagation(); if (qi >= queue.length) return; const w = words[queue[qi]]; if(player.quizMode === 'zh2en') { if(!shown) await autoSpeakZh(w.chinese); else await autoSpeakEn(w.english); } else { if(!shown) await autoSpeakEn(w.english); else await autoSpeakZh(w.chinese); } }
 
 /* ═══════════════════════════════════════════════
-   7. 🎤 完美手控版对讲机 (解决防抖与手机断流问题)
+   7. 🎤 完美手控版对讲机 (加入【火眼金睛】双重诊断)
    ═══════════════════════════════════════════════ */
 let isMicEnabled = localStorage.getItem('mw_mic') !== '0'; 
 let recognition = null; 
@@ -83,33 +83,43 @@ function renderMicBtnToggle() {
     btn.style.borderColor = isMicEnabled ? '#10b981' : '#e2e8f0'; btn.style.color = isMicEnabled ? '#10b981' : '#94a3b8';
 }
 
-function manualStartListening(e, wordInfo) {
+async function manualStartListening(e, wordInfo) {
     e.stopPropagation();
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { Dialog.alert('手机或浏览器不支持语音功能，请更换 Chrome 浏览器'); return; }
-    
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { Dialog.alert('浏览器不支持，请换用 Chrome'); return; }
     if (recognition) { recognition.abort(); }
-    
-    // 🛡️ 强制关掉当前可能正在播放的系统 TTS（解决手机麦克风通道冲突！）
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     
+    let btn = document.getElementById('bigMicBtn');
+    let hintEl = document.getElementById('hintInfo');
+
+    // 🌟 终极侦测步骤 1：先用原生 API 硬抢麦克风 🌟
+    // 此举将百分百逼出浏览器的那个带有“允许”按钮的弹窗，强行突破手机限制！
+    try {
+        if(hintEl) hintEl.innerHTML = '<span class="text-amber-500">正在唤起麦克风权限...</span>';
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // 拿到权限后咱们立刻把它关了，我们只是用它来“破冰”和验证硬件的
+        stream.getTracks().forEach(track => track.stop()); 
+    } catch (err) {
+        console.error("麦克风破冰失败:", err);
+        if(hintEl) hintEl.innerHTML = '<b class="text-rose-600">❌ 您拒绝了权限，或被悬浮窗拦截。<br>请点击网址旁边的【🔒锁图标】允许麦克风！</b>';
+        return; // 查出病因，游戏结束
+    }
+
+    // 🌟 终极侦测步骤 2：硬件无误，启动 Google Web Speech API 🌟
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRec(); 
-    
-    // 🛡️ 将 continuous 设为 false！安卓最爱这个标准单次模式，不再瞬间崩溃。
-    recognition.continuous = false; 
+    recognition.continuous = false; // 安卓稳定模式
     recognition.interimResults = true; 
     
     const expectLang = player.quizMode === 'zh2en' ? 'en-US' : 'zh-CN'; 
     recognition.lang = expectLang;
     
-    const btn = document.getElementById('bigMicBtn'); if(btn) btn.classList.add('listening');
-    const hintEl = document.getElementById('hintInfo'); if(hintEl) hintEl.innerHTML = '<span class="text-emerald-700">正在听，请大胆出声...</span>';
+    if(btn) btn.classList.add('listening');
+    if(hintEl) hintEl.innerHTML = '<span class="text-emerald-700">权限通过，请大声说话...</span>';
 
-    // 🛡️ 解决连跳问题的防抖锁
     let hasAnsweredCorrectly = false; 
 
     recognition.onresult = function(event) {
-        // 如果已经判卷成功，或者手动翻牌了，无视一切多余成绩单！
         if(shown || hasAnsweredCorrectly) return; 
         
         let interimTranscript = ''; let finalTranscript = '';
@@ -119,10 +129,8 @@ function manualStartListening(e, wordInfo) {
         if(hintEl) hintEl.innerHTML = `<span class="text-emerald-600">听到了: "${rawText}"</span>`;
         let text = rawText.toLowerCase().replace(/[\s.,?!。，？！]/g, ''); let isCorrect = false;
 
-        // 评分逻辑
-        if (expectLang === 'en-US') { 
-            let target = wordInfo.english.toLowerCase().replace(/[\s-]/g, ''); if (target && text.includes(target)) isCorrect = true; 
-        } else {
+        if (expectLang === 'en-US') { let target = wordInfo.english.toLowerCase().replace(/[\s-]/g, ''); if (target && text.includes(target)) isCorrect = true; } 
+        else {
             let targets = wordInfo.chinese.split(/[,，/\\|]/); 
             for(let t of targets) {
                 let cleanT = t.replace(/[\s]/g, ''); if (!cleanT) continue;
@@ -133,28 +141,27 @@ function manualStartListening(e, wordInfo) {
         }
         
         if (isCorrect) {
-            // 🛡️ 防抖锁闭合！
-            hasAnsweredCorrectly = true;
-            recognition.stop(); 
-            if(btn) btn.style.display = 'none';
+            hasAnsweredCorrectly = true; recognition.stop(); if(btn) btn.style.display = 'none';
             if(hintEl) hintEl.innerHTML = `<div class="text-emerald-500 font-black text-2xl drop-shadow mt-2">✅ 答对啦！</div>`;
             try { confetti({particleCount:30, spread:50, origin:{y:.6}, zIndex: 99}); } catch(e){}
-            setTimeout(() => { if(!shown) act('know'); }, 600); // 因为锁上了，这句话绝对只跑一次
+            setTimeout(() => { if(!shown) act('know'); }, 600); 
         }
     };
     
     recognition.onend = function() { 
         if(btn) btn.classList.remove('listening'); 
-        if(!hasAnsweredCorrectly && !shown && hintEl) {
-             hintEl.innerHTML = '<span class="text-amber-600 font-bold">录音已停止，请再戳一次上面的大麦克风</span>';
-        }
+        if(!hasAnsweredCorrectly && !shown && hintEl) hintEl.innerHTML = '<span class="text-amber-600 font-bold">录音自动停止，可再按一次大图标</span>';
     };
+
+    // 🌟 神级判断：如果报了网络错误，说明是国家防火墙连不上谷歌 🌟
     recognition.onerror = function(event) { 
         if(btn) btn.classList.remove('listening'); 
-        let errorMsg = '没听清哦，点击大图标重试';
-        // 抓出系统权限错误，明白告诉家长！
-        if (event.error === 'not-allowed') errorMsg = '❌ 手机麦克风权限被拒绝，请去手机系统设置里允许！';
-        if(hintEl) hintEl.innerHTML = `<span class="text-rose-500 font-bold">${errorMsg}</span>`; 
+        console.log("识别引擎报错：", event.error);
+        if (event.error === 'network' || event.error === 'not-allowed') {
+            if(hintEl) hintEl.innerHTML = '<b class="text-rose-600 block mt-2 bg-rose-50 p-2 rounded">⚠️致命问题：您的手机系统麦克风已就绪，但此安卓手机【无法连接到谷歌语音服务器】。<br>（国产安卓通病，系统底层阉割或被墙拦截，建议电脑端使用）</b>';
+        } else {
+             if(hintEl) hintEl.innerHTML = `<span class="text-rose-500 font-bold">错误: ${event.error}。重试一下？</span>`; 
+        }
     };
     recognition.start();
 }
@@ -181,9 +188,9 @@ function showCard() {
   
   const hintContainer = document.getElementById('hint');
   if(isMicEnabled) {
-      hintContainer.innerHTML = `<div id="bigMicBtn" class="big-mic-btn shadow-md" title="戳我讲话">🎙️</div><div id="hintInfo" class="text-slate-500 font-bold mt-2 text-sm pt-2">👆 戳麦克风说答案 (或点卡片翻面)</div>`;
+      hintContainer.innerHTML = `<div id="bigMicBtn" class="big-mic-btn shadow-md" title="戳我讲话">🎙️</div><div id="hintInfo" class="text-slate-500 font-bold mt-2 text-sm pt-2">👆 戳麦克风说答案 (或点屏幕翻面)</div>`;
       setTimeout(() => { const btn = document.getElementById('bigMicBtn'); if(btn) btn.onclick = (e) => manualStartListening(e, w); }, 50);
-  } else { hintContainer.innerHTML = '<span class="text-slate-400 font-bold text-sm">👆 点击卡片翻看答案</span>'; }
+  } else { hintContainer.innerHTML = '<span class="text-slate-400 font-bold text-sm">👆 点击卡片翻面背诵</span>'; }
   hintContainer.style.opacity = '1';
 
   if (player.quizMode === 'zh2en') {
@@ -216,25 +223,25 @@ function showDone() { document.getElementById('wEmo').innerHTML='<span style="fo
 function fireworks() { const cols=['#FFB3C6','#C8B6FF','#BBD0FF','#B5EAD7','#FFEAA7','#FFCBA4']; const end=Date.now()+3200; (function burst(){ try{ confetti({particleCount:5,angle:58, spread:54,origin:{x:0},colors:cols}); confetti({particleCount:5,angle:122,spread:54,origin:{x:1},colors:cols}); }catch(e){} if(Date.now()<end) requestAnimationFrame(burst); })(); }
 
 /* ═══════════════════════════════════════════════
-   9. ⚙️ 系统综合控制与网图拉取引擎
+   9. ⚙️ 家长后勤台
    ═══════════════════════════════════════════════ */
 function openGear() { renderUserCards(); renderBookTabs(); refreshList(); document.getElementById('ov').classList.add('open'); } function closeOv() { document.getElementById('ov').classList.remove('open'); } function ovClick(e) { if(e.target.id==='ov') closeOv(); }
 async function renameUser(uid) { const u = USERS.find(x => x.uid === uid); if(!u) return; const n = await Dialog.prompt(`修改宝宝昵称：`, u.name); if(n && n.trim() && n.trim() !== u.name) { u.name = n.trim(); saveUsersData(); renderUserCards(); renderPet(); } }
 async function toggleMode() { player.quizMode = (player.quizMode === 'zh2en') ? 'en2zh' : 'zh2en'; saveP(); renderUserCards(); showCard(); if(player.quizMode === 'zh2en') Dialog.alert('🌟 难度飙升！<br>模式：【看中文想英语】'); else Dialog.alert('📖 回到基础！<br>模式：【看英文认中文】'); }
 async function setDailyPlan(type) { const isNew = type === 'new'; const t = isNew ? '🎯 每日新词限额：(建议5-15)' : '🔄 每日复习上限：(建议15-30)'; const cur = isNew ? (player.dailyNew || 10) : (player.dailyRev || 30); let num = await Dialog.prompt(t, cur); if(num === null || num.trim()==='') return; num = parseInt(num); if(isNaN(num) || num < 1) { await Dialog.alert('❌ 无效数字！'); return; } if(isNew) player.dailyNew = num; else player.dailyRev = num; saveP(); renderUserCards(); if(await Dialog.confirm('✅ 计划已保存！重洗今日队伍？')) { queue = buildQueue(true); qi = 0; showCard(); } }
 
-function renderUserCards() { document.getElementById('userCards').innerHTML = USERS.map(u => { const pObj = localStorage.getItem(pKey(u.uid)) ? JSON.parse(localStorage.getItem(pKey(u.uid))) : {dailyNew:10, dailyRev:30, streak:0, coins:0, quizMode:'en2zh'}; const isMe = u.uid === currentUid; const modeBtnStr = (pObj.quizMode === 'zh2en') ? '中译英' : '英译中'; return `<div class="uc${isMe?' active-uc':''}" style="background:white;padding:12px;border-radius:12px;border:1px solid #e2e8f0;"><div class="flex justify-between items-center border-b pb-2 mb-2"><strong class="text-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1 rounded transition" onclick="renameUser('${u.uid}')">${u.ico} ${u.name} <span class="text-xs text-sky-500 font-normal">✎修改</span></strong> ${isMe?'<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-bold">当前</span>':''}</div><div class="text-sm space-y-2 mb-3 text-slate-600"><div>🔥 连胜：<b class="text-rose-500">${pObj.streak||0} 天</b> | 💰 金币：<b class="text-amber-500">${pObj.coins||0}</b></div><div class="flex flex-wrap gap-2 pt-1 border-t border-slate-50 border-dashed"><button class="bg-slate-100 text-slate-700 px-2 py-1 rounded shadow-sm text-xs font-bold" onclick="setDailyPlan('new')">🎯新词 ${pObj.dailyNew||10}</button><button class="bg-slate-100 text-slate-700 px-2 py-1 rounded shadow-sm text-xs font-bold" onclick="setDailyPlan('rev')">🔄复习 ${pObj.dailyRev||30}</button>${isMe ? `<button class="bg-gradient-to-r from-purple-100 to-fuchsia-100 text-purple-800 px-2 py-1 rounded shadow-sm text-xs font-bold border border-purple-200" onclick="toggleMode()">难度：${modeBtnStr} 🔄</button>` : ''}</div></div><div class="flex gap-2">${!isMe ? `<button class="flex-1 bg-indigo-600 text-white font-bold py-2 rounded text-sm shadow mb-0" onclick="switchUser('${u.uid}')">🔄 登录</button>` : ''}<button class="flex-1 bg-rose-100 text-rose-700 font-bold py-2 rounded text-sm shadow-sm mb-0" onclick="clearUserStep1('${u.uid}','${u.name}')">🗑️ 清零充置</button></div></div>`; }).join(''); }
+function renderUserCards() { document.getElementById('userCards').innerHTML = USERS.map(u => { const pObj = localStorage.getItem(pKey(u.uid)) ? JSON.parse(localStorage.getItem(pKey(u.uid))) : {dailyNew:10, dailyRev:30, streak:0, coins:0, quizMode:'en2zh'}; const isMe = u.uid === currentUid; const modeBtnStr = (pObj.quizMode === 'zh2en') ? '中译英' : '英译中'; return `<div class="uc${isMe?' active-uc':''}" style="background:white;padding:12px;border-radius:12px;border:1px solid #e2e8f0;"><div class="flex justify-between items-center border-b pb-2 mb-2"><strong class="text-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1 rounded transition" onclick="renameUser('${u.uid}')">${u.ico} ${u.name} <span class="text-xs text-sky-500 font-normal">✎修改</span></strong> ${isMe?'<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-bold">当前</span>':''}</div><div class="text-sm space-y-2 mb-3 text-slate-600"><div>🔥 连胜：<b class="text-rose-500">${pObj.streak||0} 天</b> | 💰 金币：<b class="text-amber-500">${pObj.coins||0}</b></div><div class="flex flex-wrap gap-2 pt-1 border-t border-slate-50 border-dashed"><button class="bg-slate-100 text-slate-700 px-2 py-1 rounded shadow-sm text-xs font-bold" onclick="setDailyPlan('new')">🎯新词 ${pObj.dailyNew||10}</button><button class="bg-slate-100 text-slate-700 px-2 py-1 rounded shadow-sm text-xs font-bold" onclick="setDailyPlan('rev')">🔄复习 ${pObj.dailyRev||30}</button>${isMe ? `<button class="bg-gradient-to-r from-purple-100 to-fuchsia-100 text-purple-800 px-2 py-1 rounded shadow-sm text-xs font-bold border border-purple-200" onclick="toggleMode()">难度：${modeBtnStr} 🔄</button>` : ''}</div></div><div class="flex gap-2">${!isMe ? `<button class="flex-1 bg-indigo-600 text-white font-bold py-2 rounded text-sm shadow mb-0" onclick="switchUser('${u.uid}')">🔄 登录</button>` : ''}<button class="flex-1 bg-rose-100 text-rose-700 font-bold py-2 rounded text-sm shadow-sm mb-0" onclick="clearUserStep1('${u.uid}','${u.name}')">🗑️ 清空进度</button></div></div>`; }).join(''); }
 function switchUser(uid) { loadBooks(); loadUser(uid); queue=buildQueue(); qi=0; renderPet(); renderBookTabs(); showCard(); renderStats(); renderUserCards(); refreshList(); }
-async function clearUserStep1(uid, name) { if (!(await Dialog.confirm(`确定清除【${name}】的所有进度？`))) return; const t = await Dialog.prompt(`输入「${name}」确认：`); if (t !== name) { await Dialog.alert('❌ 输入错误'); return; } const ws = localStorage.getItem(wKey(uid)); if (ws) { const wd = JSON.parse(ws); wd.forEach(w => { w.level = 0; w.nextReview = Date.now(); }); localStorage.setItem(wKey(uid), JSON.stringify(wd)); } localStorage.removeItem(pKey(uid)); loadBooks(); if (uid === currentUid) { loadUser(uid); queue=buildQueue(true); qi=0; renderPet(); renderBookTabs(); showCard(); renderStats(); } renderUserCards(); refreshList(); await Dialog.alert(`✅ 已彻底清空！`); }
+async function clearUserStep1(uid, name) { if (!(await Dialog.confirm(`确定清除【${name}】的所有记录？`))) return; const t = await Dialog.prompt(`输入「${name}」确认：`); if (t !== name) { await Dialog.alert('❌ 无效'); return; } const ws = localStorage.getItem(wKey(uid)); if (ws) { const wd = JSON.parse(ws); wd.forEach(w => { w.level = 0; w.nextReview = Date.now(); }); localStorage.setItem(wKey(uid), JSON.stringify(wd)); } localStorage.removeItem(pKey(uid)); loadBooks(); if (uid === currentUid) { loadUser(uid); queue=buildQueue(true); qi=0; renderPet(); renderBookTabs(); showCard(); renderStats(); } renderUserCards(); refreshList(); await Dialog.alert(`✅ 已清空`); }
 function refreshList() { const cb = books.find(b=>b.id===currentBookId); const bw = words.filter(w => w.bookId === currentBookId); document.getElementById('wcnt').textContent = bw.length; document.getElementById('wcntBook').textContent = cb ? cb.name : '默认'; document.getElementById('wlist').innerHTML = bw.map(w => { let eHtml = w.emoji && w.emoji.startsWith('http') ? `<img src="${w.emoji}" class="w-6 h-6 rounded-full object-cover">` : `<span class="w-6 h-6 inline-block text-center">${w.emoji||'📝'}</span>`; return `<div class="wi"><span class="we flex items-center justify-center">${eHtml}</span><span class="wn">${w.english}</span><span class="wz">${w.chinese}</span><span class="ws">${'⭐'.repeat(Math.min(w.level,5))}</span><button class="we-btn" onclick="editWord('${w.id}')">改</button><button class="wd" onclick="deleteWord('${w.id}')">删</button></div>`; }).join(''); }
-async function editWord(id) { const w = words.find(w => w.id === id); if (!w) return; const ne = await Dialog.prompt('英文：', w.english); if (ne === null) return; const nz = await Dialog.prompt('中文：', w.chinese); if (nz === null) return; const nEmo = await Dialog.prompt('配图(Emoji/网址/或【留空直接搜图】)：', w.emoji); if (nEmo === null) return; let en = ne.trim() || w.english, zh = nz.trim() || w.chinese, emo = nEmo.trim(); if (!emo) { Dialog.alert('⏳ 去维基百科扒高清图中...'); emo = await fetchWikiImage(en) || autoEmoji(en); } USERS.forEach(u => { const ws = localStorage.getItem(wKey(u.uid)); if (!ws) return; const arr = JSON.parse(ws); const idx = arr.findIndex(x => x.id === id); if (idx === -1) return; arr[idx].english = en; arr[idx].chinese = zh; arr[idx].emoji = emo; localStorage.setItem(wKey(u.uid), JSON.stringify(arr)); if (u.uid === currentUid) words = arr; }); if (queue[qi] !== undefined && words[queue[qi]]?.id === id) showCard(); refreshList(); renderStats(); }
+async function editWord(id) { const w = words.find(w => w.id === id); if (!w) return; const ne = await Dialog.prompt('英文：', w.english); if (ne === null) return; const nz = await Dialog.prompt('中文：', w.chinese); if (nz === null) return; const nEmo = await Dialog.prompt('配图(存线图或者留空让系统搜)：', w.emoji); if (nEmo === null) return; let en = ne.trim() || w.english, zh = nz.trim() || w.chinese, emo = nEmo.trim(); if (!emo) { Dialog.alert('⏳搜真图中...'); emo = await fetchWikiImage(en) || autoEmoji(en); } USERS.forEach(u => { const ws = localStorage.getItem(wKey(u.uid)); if (!ws) return; const arr = JSON.parse(ws); const idx = arr.findIndex(x => x.id === id); if (idx === -1) return; arr[idx].english = en; arr[idx].chinese = zh; arr[idx].emoji = emo; localStorage.setItem(wKey(u.uid), JSON.stringify(arr)); if (u.uid === currentUid) words = arr; }); if (queue[qi] !== undefined && words[queue[qi]]?.id === id) showCard(); refreshList(); renderStats(); }
 async function deleteWord(id) { if(!(await Dialog.confirm('确定删除吗？'))) return; USERS.forEach(u => { const ws = localStorage.getItem(wKey(u.uid)); if (!ws) return; const arr = JSON.parse(ws).filter(w => w.id !== id); localStorage.setItem(wKey(u.uid), JSON.stringify(arr)); if (u.uid === currentUid) words = arr; }); queue = buildQueue(); qi = 0; refreshList(); renderStats(); showCard(); }
-async function importWords() { const raw = document.getElementById('ta').value.trim(); if (!raw) return; Dialog.alert('🔍 正在全网找图，别关网页...'); let ok=0; const p = []; raw.split('\n').forEach(l => { const pp = l.trim().split(/[,，]/); if(pp.length>=2) p.push({ en:pp[0].trim(), zh:pp[1].trim(), emo:pp[2]?.trim() }); }); if (!p.length) return; for (let i = 0; i < p.length; i++) { if (!p[i].emo) p[i].emo = await fetchWikiImage(p[i].en) || autoEmoji(p[i].en); } USERS.forEach(u => { const ws = localStorage.getItem(wKey(u.uid)); const arr = ws ? JSON.parse(ws) : []; p.forEach(({en, zh, emo}) => { const dup = arr.find(w => w.english.toLowerCase()===en.toLowerCase() && w.bookId===currentBookId); if (!dup) { arr.push({ id:'w_'+Date.now()+'_'+Math.random().toString(36).slice(2), english:en, chinese:zh, emoji:emo, level:0, nextReview:Date.now(), bookId:currentBookId }); if(u.uid===currentUid) ok++; } }); localStorage.setItem(wKey(u.uid), JSON.stringify(arr)); if(u.uid===currentUid) words = arr; }); document.getElementById('ta').value = ''; Dialog.alert(`✅ 导入 ${ok} 词，配图已保存！`); refreshList(); queue = buildQueue(); qi = 0; showCard(); renderStats(); }
+async function importWords() { const raw = document.getElementById('ta').value.trim(); if (!raw) return; Dialog.alert('🔍 正在全网寻图，别关页面'); let ok=0; const p = []; raw.split('\n').forEach(l => { const pp = l.trim().split(/[,，]/); if(pp.length>=2) p.push({ en:pp[0].trim(), zh:pp[1].trim(), emo:pp[2]?.trim() }); }); if (!p.length) return; for (let i = 0; i < p.length; i++) { if (!p[i].emo) p[i].emo = await fetchWikiImage(p[i].en) || autoEmoji(p[i].en); } USERS.forEach(u => { const ws = localStorage.getItem(wKey(u.uid)); const arr = ws ? JSON.parse(ws) : []; p.forEach(({en, zh, emo}) => { const dup = arr.find(w => w.english.toLowerCase()===en.toLowerCase() && w.bookId===currentBookId); if (!dup) { arr.push({ id:'w_'+Date.now()+'_'+Math.random().toString(36).slice(2), english:en, chinese:zh, emoji:emo, level:0, nextReview:Date.now(), bookId:currentBookId }); if(u.uid===currentUid) ok++; } }); localStorage.setItem(wKey(u.uid), JSON.stringify(arr)); if(u.uid===currentUid) words = arr; }); document.getElementById('ta').value = ''; Dialog.alert(`✅ 导入 ${ok} 词`); refreshList(); queue = buildQueue(); qi = 0; showCard(); renderStats(); }
 function renderBookTabs() { document.getElementById('bookTabs').innerHTML = books.map(b => `<button class="bg-slate-100 px-3 py-1 rounded font-bold text-slate-700${b.id===currentBookId?' ring-2 ring-indigo-400':''}" onclick="switchBook('${b.id}')">${b.name} (${words.filter(w=>w.bookId===b.id).length})</button>`).join(''); document.getElementById('curBookLabel').textContent = books.find(b=>b.id===currentBookId)?.name || '默认'; }
 function switchBook(id) { currentBookId = id; localStorage.setItem('mw_cbook_'+currentUid, id); queue=buildQueue(); qi=0; renderBookTabs(); refreshList(); renderStats(); showCard(); }
 async function createBook() { const n=await Dialog.prompt('新词库名：'); if(!n||!n.trim())return; const id='b_'+Date.now(); books.push({id, name:n.trim()}); saveBooks(); switchBook(id); }
-async function renameBook() { const cb=books.find(b=>b.id===currentBookId); if(!cb)return; const n=await Dialog.prompt('重命名：',cb.name); if(n&&n.trim()){cb.name=n.trim(); saveBooks(); renderBookTabs();} }
-async function deleteBook() { if(books.length<=1){await Dialog.alert('至少留1个词库');return;} if(currentBookId === 'default') {await Dialog.alert('系统词库不可删！');return;} if(!(await Dialog.confirm('⚠️ 删除它及下面所有的词？'))) return; USERS.forEach(u=>{ const ws=localStorage.getItem(wKey(u.uid)); if(ws){ const arr=JSON.parse(ws).filter(w=>w.bookId!==currentBookId); localStorage.setItem(wKey(u.uid),JSON.stringify(arr)); if(u.uid===currentUid)words=arr; } }); books=books.filter(b=>b.id!==currentBookId); saveBooks(); currentBookId=books[0].id; localStorage.setItem('mw_cbook_',currentBookId); queue=buildQueue(); qi=0; renderBookTabs(); refreshList(); renderStats(); showCard(); }
-function petTap() { const st = getPetStage(); const msgs = ['嗨，点我干嘛！', '我要金币买苹果！', '快按住麦克风说话！']; if(player.ownsCrown) msgs.push('膜拜吧！理财带师💰'); if(st.level >= 4) msgs.push('鲨鱼来啦！🦈'); const el = document.createElement('div'); el.textContent = msgs[Math.floor(Math.random() * msgs.length)]; el.style.cssText = 'position:fixed; top:20%; left:50%; transform:translateX(-50%); background:white; color:#333; font-weight:bold; padding:10px 20px; border-radius:16px; box-shadow:0 10px 20px rgba(0,0,0,0.1); z-index:9999; animation:flyup 1.8s forwards; font-size:0.9rem; pointer-events:none;'; document.body.appendChild(el); setTimeout(()=>el.remove(), 1800); }
+async function renameBook() { const cb=books.find(b=>b.id===currentBookId); if(!cb)return; const n=await Dialog.prompt('改名：',cb.name); if(n&&n.trim()){cb.name=n.trim(); saveBooks(); renderBookTabs();} }
+async function deleteBook() { if(books.length<=1){await Dialog.alert('至少留1个');return;} if(currentBookId === 'default') {await Dialog.alert('不可删');return;} if(!(await Dialog.confirm('⚠️ 连同词一并删？'))) return; USERS.forEach(u=>{ const ws=localStorage.getItem(wKey(u.uid)); if(ws){ const arr=JSON.parse(ws).filter(w=>w.bookId!==currentBookId); localStorage.setItem(wKey(u.uid),JSON.stringify(arr)); if(u.uid===currentUid)words=arr; } }); books=books.filter(b=>b.id!==currentBookId); saveBooks(); currentBookId=books[0].id; localStorage.setItem('mw_cbook_',currentBookId); queue=buildQueue(); qi=0; renderBookTabs(); refreshList(); renderStats(); showCard(); }
+function petTap() { const st = getPetStage(); const msgs = ['哎呀', '发财啦！', '多说英语拿金币']; if(player.ownsCrown) msgs.push('膜拜土豪💰'); if(st.level >= 4) msgs.push('鲨鱼快跑🦈'); const el = document.createElement('div'); el.textContent = msgs[Math.floor(Math.random() * msgs.length)]; el.style.cssText = 'position:fixed; top:20%; left:50%; transform:translateX(-50%); background:white; color:#333; font-weight:bold; padding:10px 20px; border-radius:16px; box-shadow:0 10px 20px rgba(0,0,0,0.1); z-index:9999; animation:flyup 1.8s forwards; font-size:0.9rem; pointer-events:none;'; document.body.appendChild(el); setTimeout(()=>el.remove(), 1800); }
 function init() { loadUsersData(); loadBooks(); loadUser(currentUid); renderPet(); document.getElementById('accentBtn').textContent = ttsAccent===2 ? 'US' : 'UK'; queue=buildQueue(); qi=0; showCard(); renderStats(); }
 init();
