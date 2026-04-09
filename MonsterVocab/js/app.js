@@ -712,4 +712,3 @@ function init() {
   showCard(); renderStats();
 }
 init();
-</script>
