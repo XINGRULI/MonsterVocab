@@ -6,32 +6,13 @@ if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navi
 /* ═══════════════════════════════════════════════
    2. 视觉进化与 CSS 强制防透视补丁
    ═══════════════════════════════════════════════ */
-const Dialog = {
-    show(title, type, defaultVal = '') {
-        return new Promise(resolve => {
-            const m = document.getElementById('sysModal'); const c = document.getElementById('sysModalContent');
-            const t = document.getElementById('sysModalTitle'); const i = document.getElementById('sysModalInput');
-            const btnCancel = document.getElementById('sysModalCancel'); const btnConfirm = document.getElementById('sysModalConfirm');
-            t.innerHTML = title; m.classList.remove('hidden'); m.classList.add('flex');
-            setTimeout(() => { c.classList.remove('scale-95'); c.classList.add('scale-100'); }, 10);
-            i.classList.add('hidden'); btnCancel.classList.add('hidden'); i.value = defaultVal;
-            if(type === 'prompt') { i.classList.remove('hidden'); btnCancel.classList.remove('hidden'); i.focus(); } 
-            else if(type === 'confirm') { btnCancel.classList.remove('hidden'); }
-            const cleanup = () => { m.classList.remove('flex');  m.classList.add('hidden'); c.classList.remove('scale-100'); c.classList.add('scale-95'); btnCancel.onclick = null; btnConfirm.onclick = null; };
-            btnCancel.onclick = () => { cleanup(); resolve(false); }; btnConfirm.onclick = () => { cleanup(); resolve(type === 'prompt' ? i.value : true); };
-        });
-    }, alert(title) { return this.show(title, 'alert'); }, confirm(title) { return this.show(title, 'confirm'); }, prompt(title, def) { return this.show(title, 'prompt', def); }
-};
+const Dialog = { show(title, type, defaultVal = '') { return new Promise(resolve => { const m = document.getElementById('sysModal'); const c = document.getElementById('sysModalContent'); const t = document.getElementById('sysModalTitle'); const i = document.getElementById('sysModalInput'); const btnCancel = document.getElementById('sysModalCancel'); const btnConfirm = document.getElementById('sysModalConfirm'); t.innerHTML = title; m.classList.remove('hidden'); m.classList.add('flex'); setTimeout(() => { c.classList.remove('scale-95'); c.classList.add('scale-100'); }, 10); i.classList.add('hidden'); btnCancel.classList.add('hidden'); i.value = defaultVal; if(type === 'prompt') { i.classList.remove('hidden'); btnCancel.classList.remove('hidden'); i.focus(); } else if(type === 'confirm') { btnCancel.classList.remove('hidden'); } const cleanup = () => { m.classList.remove('flex'); m.classList.add('hidden'); c.classList.remove('scale-100'); c.classList.add('scale-95'); btnCancel.onclick = null; btnConfirm.onclick = null; }; btnCancel.onclick = () => { cleanup(); resolve(false); }; btnConfirm.onclick = () => { cleanup(); resolve(type === 'prompt' ? i.value : true); }; }); }, alert(title) { return this.show(title, 'alert'); }, confirm(title) { return this.show(title, 'confirm'); }, prompt(title, def) { return this.show(title, 'prompt', def); } };
 
-// 🌟 解决痛点1：强制修改原生 HTML 中的半透明。彻底不可见！
 const keyf = document.createElement('style');
 keyf.innerHTML = `
-/* 消灭半透明透视！设为 0 透明并缩小，保证正面绝对干干净净 */
 .w-emo.off { opacity: 0 !important; filter: none !important; transform: scale(0.5) !important; pointer-events: none; }
 .w-zh.off { opacity: 0 !important; transform: translateY(15px) !important; pointer-events: none; }
 .w-emo, .w-zh { transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important; }
-
-/* 其他特效及对讲机 */
 @keyframes flyup { 0%{opacity:1; transform:translate(-50%,-50%) scale(1);} 100%{opacity:0; transform:translate(-50%,-150%) scale(1.5);} } 
 @keyframes dropFade { 0%{opacity:0;transform:translate(-50%,-100vh) scale(0.5)} 30%{opacity:1;transform:translate(-50%,-50%) scale(1.2)} 70%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%, -50%) scale(0)} }
 @keyframes micPulseGreen { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1.15); box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
@@ -42,44 +23,21 @@ keyf.innerHTML = `
 document.head.appendChild(keyf);
 
 /* ═══════════════════════════════════════════════
-   3. 🌟 新增引擎：维基百科自动配图溯源器
+   3. 维基百科自动配图溯源器 (保持上版特性)
    ═══════════════════════════════════════════════ */
-const EMOJI = { apple:'🍎',banana:'🍌',cat:'🐱',dog:'🐶',elephant:'🐘',fish:'🐟',tiger:'🐅',lion:'🐅',car:'🚗',bus:'🚌' }; 
-function autoEmoji(en) { return EMOJI[en.toLowerCase().trim()] || '📝'; }
-
-// 这段黑科技会自动连接维基百科，寻找词汇的真实图片！
-async function fetchWikiImage(word) {
-    try {
-        const queryWord = encodeURIComponent(word.trim().toLowerCase());
-        const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${queryWord}&prop=pageimages&format=json&pithumbsize=400&origin=*`);
-        const data = await res.json();
-        const pages = data.query.pages;
-        const pageId = Object.keys(pages)[0];
-        if (pageId !== '-1' && pages[pageId].thumbnail) {
-            return pages[pageId].thumbnail.source; // 完美拿到一张绝对无版权高清网图
-        }
-    } catch(e) { console.warn("维基拉取图片失败", e); }
-    return null; // 拉不到就算了，退回 Emoji
-}
+const EMOJI = { apple:'🍎',banana:'🍌',cat:'🐱',dog:'🐶',elephant:'🐘',fish:'🐟',tiger:'🐅',lion:'🐅',car:'🚗',bus:'🚌' }; function autoEmoji(en) { return EMOJI[en.toLowerCase().trim()] || '📝'; }
+async function fetchWikiImage(word) { try { const queryWord = encodeURIComponent(word.trim().toLowerCase()); const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${queryWord}&prop=pageimages&format=json&pithumbsize=400&origin=*`); const data = await res.json(); const pages = data.query.pages; const pageId = Object.keys(pages)[0]; if (pageId !== '-1' && pages[pageId].thumbnail) { return pages[pageId].thumbnail.source; } } catch(e) {} return null; }
 
 /* ═══════════════════════════════════════════════
    4. 全局常量、用户、词库
    ═══════════════════════════════════════════════ */
-let ttsAccent = parseInt(localStorage.getItem('mw_accent') || '2'); 
-function toggleAccent() { ttsAccent = ttsAccent === 2 ? 1 : 2; localStorage.setItem('mw_accent', ttsAccent); document.getElementById('accentBtn').textContent = ttsAccent === 2 ? 'US' : 'UK'; }
-const PET_STAGES = [ { level: 1, text: 'Lv.1 魔法神蛋', ico: '🥚', sub: '刚出生，急需营养～', threshold: 0 }, { level: 2, text: 'Lv.2 贪吃小恐龙', ico: '🦖', sub: '破壳啦！解锁商店装备！', threshold: 50 }, { level: 3, text: 'Lv.3 快乐独角兽', ico: '🦄', sub: '神奇魔法觉醒！', threshold: 3000 }, { level: 4, text: 'Lv.4 巡洋大头鲨', ico: '🦈', sub: '大富翁！金币收益翻倍！', threshold: 8000 }, { level: 5, text: 'Lv.5 许愿神龙', ico: '🐉', sub: '巅峰连胜！去找爸妈许愿！', threshold: 25000 } ];
-const FULLNESS_CAP = 300; 
+let ttsAccent = parseInt(localStorage.getItem('mw_accent') || '2'); function toggleAccent() { ttsAccent = ttsAccent === 2 ? 1 : 2; localStorage.setItem('mw_accent', ttsAccent); document.getElementById('accentBtn').textContent = ttsAccent === 2 ? 'US' : 'UK'; }
+const PET_STAGES = [ { level: 1, text: 'Lv.1 魔法神蛋', ico: '🥚', sub: '刚出生，急需营养～', threshold: 0 }, { level: 2, text: 'Lv.2 贪吃小恐龙', ico: '🦖', sub: '破壳啦！解锁商店装备！', threshold: 50 }, { level: 3, text: 'Lv.3 快乐独角兽', ico: '🦄', sub: '神奇魔法觉醒！', threshold: 3000 }, { level: 4, text: 'Lv.4 巡洋大头鲨', ico: '🦈', sub: '大富翁！金币收益翻倍！', threshold: 8000 }, { level: 5, text: 'Lv.5 许愿神龙', ico: '🐉', sub: '巅峰连胜！去找爸妈许愿！', threshold: 25000 } ]; const FULLNESS_CAP = 300; 
 
-let USERS = [];
-function loadUsersData() { const raw = localStorage.getItem('mw_users_v2'); if(raw) { USERS = JSON.parse(raw); } else { USERS = [ { uid:'u1', name:'大宝', ico:'👦' }, { uid:'u2', name:'二宝', ico:'👧' } ]; saveUsersData(); } }
-function saveUsersData() { localStorage.setItem('mw_users_v2', JSON.stringify(USERS)); }
-let currentUid = localStorage.getItem('mw_cur') || 'u1';
-function wKey(uid) { return 'mw_w_'+uid; }
-function pKey(uid) { return 'mw_p_'+uid; }
+let USERS = []; function loadUsersData() { const raw = localStorage.getItem('mw_users_v2'); if(raw) { USERS = JSON.parse(raw); } else { USERS = [ { uid:'u1', name:'大宝', ico:'👦' }, { uid:'u2', name:'二宝', ico:'👧' } ]; saveUsersData(); } } function saveUsersData() { localStorage.setItem('mw_users_v2', JSON.stringify(USERS)); }
+let currentUid = localStorage.getItem('mw_cur') || 'u1'; function wKey(uid) { return 'mw_w_'+uid; } function pKey(uid) { return 'mw_p_'+uid; }
 let words = []; let player = {}; let books = []; let currentBookId = 'default'; let queue = []; let qi = 0; let shown = false;
-const saveW = () => localStorage.setItem(wKey(currentUid), JSON.stringify(words));
-const saveP = () => localStorage.setItem(pKey(currentUid), JSON.stringify(player));
-const saveBooks = () => localStorage.setItem('mw_books', JSON.stringify(books));
+const saveW = () => localStorage.setItem(wKey(currentUid), JSON.stringify(words)); const saveP = () => localStorage.setItem(pKey(currentUid), JSON.stringify(player)); const saveBooks = () => localStorage.setItem('mw_books', JSON.stringify(books));
 
 function loadBooks() { try { const bs = localStorage.getItem('mw_books'); books = bs ? JSON.parse(bs) : [{id:'default', name:'默认词库'}]; if (!books.find(b => b.id==='default')) books.unshift({id:'default', name:'默认词库'}); } catch (e) { books = [{id:'default', name:'默认词库'}]; } }
 function loadUser(uid) { currentUid = uid; localStorage.setItem('mw_cur', uid); const ws = localStorage.getItem(wKey(uid)); if (ws) { words = JSON.parse(ws); words.forEach(w => { if (!w.bookId) w.bookId='default'; }); saveW(); } else { words = []; saveW(); } const ps = localStorage.getItem(pKey(uid)); player = ps ? JSON.parse(ps) : {}; if(player.dailyNew===undefined) player.dailyNew = 10; if(player.dailyRev===undefined) player.dailyRev = 30; if(player.streak===undefined) player.streak = 0; if(player.coins===undefined) player.coins = 0; if(player.fullness===undefined) player.fullness = 0; if(player.totalFed===undefined) player.totalFed = 0; if(player.quizMode===undefined) player.quizMode = 'en2zh'; currentBookId = localStorage.getItem('mw_cbook_'+uid) || 'default'; }
@@ -87,7 +45,7 @@ function buildQueue(forceRebuild = false) { const now = Date.now(); const today 
 function interval(lvl) { if (lvl === 1) return 12 * 3600000; if (lvl === 2) return 24 * 3600000; if (lvl === 3) return 2 * 24 * 3600000; if (lvl === 4) return 4 * 24 * 3600000; return 7 * 24 * 3600000; }
 
 /* ═══════════════════════════════════════════════
-   5. 💰 金库、打卡、杂货铺逻辑
+   5. 💰 金库、打卡、杂货铺逻辑 
    ═══════════════════════════════════════════════ */
 function getPetStage() { let cs = PET_STAGES[0]; for(let i = 0; i < PET_STAGES.length; i++) { if(player.totalFed >= PET_STAGES[i].threshold) cs = PET_STAGES[i]; } return cs; }
 function act(action) { if (qi >= queue.length) return; const idx = queue[qi]; const w = words[idx]; const isNewWord = (w.level === 0); const stage = getPetStage(); const coinMult = (stage.level >= 4) ? 2 : 1; if (action === 'know' || action === 'master') { if (isNewWord) player.todayNew = (player.todayNew || 0) + 1; else player.todayRev = (player.todayRev || 0) + 1; if (action === 'know') { w.level = Math.max(1, w.level + 1); w.nextReview = Date.now() + interval(w.level); earnCoins(2 * coinMult); } else { w.level = 5; w.nextReview = Date.now() + 7 * 24 * 3600000; earnCoins(10 * coinMult); } } else { if (action === 'fuzzy') { w.level = Math.max(1, w.level); if(stage.level >= 3) earnCoins(1); } else { w.level = 0; } queue.push(idx); } saveW(); qi++; setTimeout(showCard, 100); }
@@ -108,9 +66,10 @@ async function autoSpeakZh(text) { return new Promise((r) => { const url = `http
 async function speak(e) { e.stopPropagation(); if (qi >= queue.length) return; const w = words[queue[qi]]; if(player.quizMode === 'zh2en') { if(!shown) await autoSpeakZh(w.chinese); else await autoSpeakEn(w.english); } else { if(!shown) await autoSpeakEn(w.english); else await autoSpeakZh(w.chinese); } }
 
 /* ═══════════════════════════════════════════════
-   7. 🎤 完美手控版对讲机 (支持连续精准听写)
+   7. 🎤 完美手控版对讲机 (解决防抖与手机断流问题)
    ═══════════════════════════════════════════════ */
-let isMicEnabled = localStorage.getItem('mw_mic') !== '0'; let recognition = null; 
+let isMicEnabled = localStorage.getItem('mw_mic') !== '0'; 
+let recognition = null; 
 
 function renderMicBtnToggle() {
     let btn = document.getElementById('micToggleBtn');
@@ -126,25 +85,44 @@ function renderMicBtnToggle() {
 
 function manualStartListening(e, wordInfo) {
     e.stopPropagation();
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { Dialog.alert('浏览器不支持，请换用 Chrome'); return; }
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { Dialog.alert('手机或浏览器不支持语音功能，请更换 Chrome 浏览器'); return; }
+    
     if (recognition) { recognition.abort(); }
+    
+    // 🛡️ 强制关掉当前可能正在播放的系统 TTS（解决手机麦克风通道冲突！）
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRec(); recognition.continuous = true; recognition.interimResults = true; 
-    const expectLang = player.quizMode === 'zh2en' ? 'en-US' : 'zh-CN'; recognition.lang = expectLang;
+    recognition = new SpeechRec(); 
+    
+    // 🛡️ 将 continuous 设为 false！安卓最爱这个标准单次模式，不再瞬间崩溃。
+    recognition.continuous = false; 
+    recognition.interimResults = true; 
+    
+    const expectLang = player.quizMode === 'zh2en' ? 'en-US' : 'zh-CN'; 
+    recognition.lang = expectLang;
     
     const btn = document.getElementById('bigMicBtn'); if(btn) btn.classList.add('listening');
-    const hintEl = document.getElementById('hintInfo'); if(hintEl) hintEl.innerHTML = '<span class="text-emerald-700">正在听，请大胆说...</span>';
+    const hintEl = document.getElementById('hintInfo'); if(hintEl) hintEl.innerHTML = '<span class="text-emerald-700">正在听，请大胆出声...</span>';
+
+    // 🛡️ 解决连跳问题的防抖锁
+    let hasAnsweredCorrectly = false; 
 
     recognition.onresult = function(event) {
-        if(shown) return; 
+        // 如果已经判卷成功，或者手动翻牌了，无视一切多余成绩单！
+        if(shown || hasAnsweredCorrectly) return; 
+        
         let interimTranscript = ''; let finalTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript; else interimTranscript += event.results[i][0].transcript; }
         let rawText = finalTranscript || interimTranscript; if(!rawText) return;
+        
         if(hintEl) hintEl.innerHTML = `<span class="text-emerald-600">听到了: "${rawText}"</span>`;
         let text = rawText.toLowerCase().replace(/[\s.,?!。，？！]/g, ''); let isCorrect = false;
 
-        if (expectLang === 'en-US') { let target = wordInfo.english.toLowerCase().replace(/[\s-]/g, ''); if (target && text.includes(target)) isCorrect = true; } 
-        else {
+        // 评分逻辑
+        if (expectLang === 'en-US') { 
+            let target = wordInfo.english.toLowerCase().replace(/[\s-]/g, ''); if (target && text.includes(target)) isCorrect = true; 
+        } else {
             let targets = wordInfo.chinese.split(/[,，/\\|]/); 
             for(let t of targets) {
                 let cleanT = t.replace(/[\s]/g, ''); if (!cleanT) continue;
@@ -155,19 +133,34 @@ function manualStartListening(e, wordInfo) {
         }
         
         if (isCorrect) {
-            recognition.stop(); if(btn) btn.style.display = 'none';
+            // 🛡️ 防抖锁闭合！
+            hasAnsweredCorrectly = true;
+            recognition.stop(); 
+            if(btn) btn.style.display = 'none';
             if(hintEl) hintEl.innerHTML = `<div class="text-emerald-500 font-black text-2xl drop-shadow mt-2">✅ 答对啦！</div>`;
             try { confetti({particleCount:30, spread:50, origin:{y:.6}, zIndex: 99}); } catch(e){}
-            setTimeout(() => { if(!shown) act('know'); }, 600); 
+            setTimeout(() => { if(!shown) act('know'); }, 600); // 因为锁上了，这句话绝对只跑一次
         }
     };
-    recognition.onend = function() { if(btn) btn.classList.remove('listening'); };
-    recognition.onerror = function() { if(btn) btn.classList.remove('listening'); if(hintEl) hintEl.innerHTML = '<span class="text-rose-500 font-bold">没听清哦，再点一次录音</span>'; };
+    
+    recognition.onend = function() { 
+        if(btn) btn.classList.remove('listening'); 
+        if(!hasAnsweredCorrectly && !shown && hintEl) {
+             hintEl.innerHTML = '<span class="text-amber-600 font-bold">录音已停止，请再戳一次上面的大麦克风</span>';
+        }
+    };
+    recognition.onerror = function(event) { 
+        if(btn) btn.classList.remove('listening'); 
+        let errorMsg = '没听清哦，点击大图标重试';
+        // 抓出系统权限错误，明白告诉家长！
+        if (event.error === 'not-allowed') errorMsg = '❌ 手机麦克风权限被拒绝，请去手机系统设置里允许！';
+        if(hintEl) hintEl.innerHTML = `<span class="text-rose-500 font-bold">${errorMsg}</span>`; 
+    };
     recognition.start();
 }
 
 /* ═══════════════════════════════════════════════
-   8. 🎨 视图渲染主控：完全隔离真图与 Emoji
+   8. 🎨 视图渲染主控
    ═══════════════════════════════════════════════ */
 function renderPet() { const st = getPetStage(); document.getElementById('petIco').textContent = st.ico; document.getElementById('petName').textContent = `${st.text} (连胜 ${player.streak || 0})`; document.getElementById('fullnessBar').style.width = Math.min((player.fullness / FULLNESS_CAP) * 100, 100) + '%'; document.getElementById('fullnessTxt').textContent = `${player.fullness} / ${FULLNESS_CAP} 饱食度`; document.getElementById('coinAmo').textContent = player.coins; if(document.getElementById('shopCoinDisplay')) document.getElementById('shopCoinDisplay').textContent = player.coins; document.getElementById('petCrown').style.display = player.ownsCrown ? 'block' : 'none'; const u = USERS.find(u=>u.uid===currentUid); document.getElementById('userBadge').textContent = u.ico+' '+u.name; }
 function renderStats() { const bw = words.filter(w => w.bookId === currentBookId); const qRem = Math.max(0, queue.length - qi); document.getElementById('sTodo').textContent = qRem; document.getElementById('sTotal').textContent = `${player.todayNew || 0}/${player.dailyNew || 10}`; document.getElementById('sMast').textContent = bw.filter(w=>w.level>=5).length; document.getElementById('curBookLabel').textContent = books.find(b=>b.id===currentBookId)?.name || '默认词库'; }
@@ -179,13 +172,7 @@ function showCard() {
   const w = words[queue[qi]]; shown = false;
   
   const wEmo = document.getElementById('wEmo'); const wEn = document.getElementById('wEn'); const wPh = document.getElementById('wPh'); const wZh = document.getElementById('wZh');
-  
-  // 🌟 如果 emoji 字段里存的是真实图片的网址 (http开头的)
-  if (w.emoji && w.emoji.startsWith('http')) {
-      wEmo.innerHTML = `<img src="${w.emoji}" class="w-32 h-32 md:w-40 md:h-40 rounded-[28px] object-cover border-4 border-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.15)] mx-auto">`;
-  } else {
-      wEmo.innerHTML = `<span style="font-size: 5rem;">${w.emoji || '📝'}</span>`;
-  }
+  if (w.emoji && w.emoji.startsWith('http')) { wEmo.innerHTML = `<img src="${w.emoji}" class="w-32 h-32 md:w-40 md:h-40 rounded-[28px] object-cover border-4 border-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.15)] mx-auto">`; } else { wEmo.innerHTML = `<span style="font-size: 5rem;">${w.emoji || '📝'}</span>`; }
   
   wEn.textContent = w.english; wPh.textContent = getPhonics(w.english); wZh.textContent = w.chinese;
   document.getElementById('lvBadge').textContent= 'Lv.'+w.level; document.getElementById('acts').removeAttribute('hidden'); document.getElementById('sndBtn').style.display='flex';
@@ -194,7 +181,7 @@ function showCard() {
   
   const hintContainer = document.getElementById('hint');
   if(isMicEnabled) {
-      hintContainer.innerHTML = `<div id="bigMicBtn" class="big-mic-btn shadow-md" title="点击开始对讲录音">🎙️</div><div id="hintInfo" class="text-slate-400 font-bold mt-2 text-sm pt-2">👆 点击麦克风说答案，或点下方翻面</div>`;
+      hintContainer.innerHTML = `<div id="bigMicBtn" class="big-mic-btn shadow-md" title="戳我讲话">🎙️</div><div id="hintInfo" class="text-slate-500 font-bold mt-2 text-sm pt-2">👆 戳麦克风说答案 (或点卡片翻面)</div>`;
       setTimeout(() => { const btn = document.getElementById('bigMicBtn'); if(btn) btn.onclick = (e) => manualStartListening(e, w); }, 50);
   } else { hintContainer.innerHTML = '<span class="text-slate-400 font-bold text-sm">👆 点击卡片翻看答案</span>'; }
   hintContainer.style.opacity = '1';
@@ -216,7 +203,6 @@ function cardTap() {
   const w = words[queue[qi]]; const wEmo = document.getElementById('wEmo'); const wEn = document.getElementById('wEn'); const wPh = document.getElementById('wPh'); const wZh = document.getElementById('wZh');
   document.getElementById('hint').style.opacity = shown ? '0' : '1';
 
-  // 翻面控制，彻底利用上了刚刚注入的新版 CSS
   if (player.quizMode === 'zh2en') {
       wEn.style.opacity = shown ? '1' : '0'; wEn.style.transform = shown ? 'translateY(0)' : 'translateY(10px)'; wPh.style.opacity = shown ? '1' : '0';
       if (shown) autoSpeakEn(w.english);
@@ -226,12 +212,11 @@ function cardTap() {
   }
 }
 function prevWord(e) { e.stopPropagation(); if (qi > 0) { qi--; showCard(); } }
-
 function showDone() { document.getElementById('wEmo').innerHTML='<span style="font-size: 5rem;">🏆</span>'; document.getElementById('wEmo').classList.remove('off'); document.getElementById('wEn').textContent='太棒啦！'; document.getElementById('wPh').textContent=''; document.getElementById('wZh').textContent='快去买点口粮喂怪兽！'; document.getElementById('wZh').classList.remove('off'); document.getElementById('hint').style.opacity= '0'; document.getElementById('lvBadge').textContent='✨'; document.getElementById('wEn').style.opacity = '1'; document.getElementById('wEn').style.transform = 'translateY(0)'; document.getElementById('acts').setAttribute('hidden',''); document.getElementById('sndBtn').style.display='none'; document.getElementById('dots').innerHTML=''; renderStats(); const c=document.getElementById('card'); c.classList.remove('cin'); void c.offsetWidth; c.classList.add('cin'); let btn = document.getElementById('micToggleBtn'); if(btn) btn.style.display = 'none'; setTimeout(fireworks, 420); processDailyCheckIn(); }
 function fireworks() { const cols=['#FFB3C6','#C8B6FF','#BBD0FF','#B5EAD7','#FFEAA7','#FFCBA4']; const end=Date.now()+3200; (function burst(){ try{ confetti({particleCount:5,angle:58, spread:54,origin:{x:0},colors:cols}); confetti({particleCount:5,angle:122,spread:54,origin:{x:1},colors:cols}); }catch(e){} if(Date.now()<end) requestAnimationFrame(burst); })(); }
 
 /* ═══════════════════════════════════════════════
-   9. ⚙️ 系统设置与大后勤代码 (加入自动捞图引擎)
+   9. ⚙️ 系统综合控制与网图拉取引擎
    ═══════════════════════════════════════════════ */
 function openGear() { renderUserCards(); renderBookTabs(); refreshList(); document.getElementById('ov').classList.add('open'); } function closeOv() { document.getElementById('ov').classList.remove('open'); } function ovClick(e) { if(e.target.id==='ov') closeOv(); }
 async function renameUser(uid) { const u = USERS.find(x => x.uid === uid); if(!u) return; const n = await Dialog.prompt(`修改宝宝昵称：`, u.name); if(n && n.trim() && n.trim() !== u.name) { u.name = n.trim(); saveUsersData(); renderUserCards(); renderPet(); } }
@@ -241,71 +226,15 @@ async function setDailyPlan(type) { const isNew = type === 'new'; const t = isNe
 function renderUserCards() { document.getElementById('userCards').innerHTML = USERS.map(u => { const pObj = localStorage.getItem(pKey(u.uid)) ? JSON.parse(localStorage.getItem(pKey(u.uid))) : {dailyNew:10, dailyRev:30, streak:0, coins:0, quizMode:'en2zh'}; const isMe = u.uid === currentUid; const modeBtnStr = (pObj.quizMode === 'zh2en') ? '中译英' : '英译中'; return `<div class="uc${isMe?' active-uc':''}" style="background:white;padding:12px;border-radius:12px;border:1px solid #e2e8f0;"><div class="flex justify-between items-center border-b pb-2 mb-2"><strong class="text-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1 rounded transition" onclick="renameUser('${u.uid}')">${u.ico} ${u.name} <span class="text-xs text-sky-500 font-normal">✎修改</span></strong> ${isMe?'<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-bold">当前</span>':''}</div><div class="text-sm space-y-2 mb-3 text-slate-600"><div>🔥 连胜：<b class="text-rose-500">${pObj.streak||0} 天</b> | 💰 金币：<b class="text-amber-500">${pObj.coins||0}</b></div><div class="flex flex-wrap gap-2 pt-1 border-t border-slate-50 border-dashed"><button class="bg-slate-100 text-slate-700 px-2 py-1 rounded shadow-sm text-xs font-bold" onclick="setDailyPlan('new')">🎯新词 ${pObj.dailyNew||10}</button><button class="bg-slate-100 text-slate-700 px-2 py-1 rounded shadow-sm text-xs font-bold" onclick="setDailyPlan('rev')">🔄复习 ${pObj.dailyRev||30}</button>${isMe ? `<button class="bg-gradient-to-r from-purple-100 to-fuchsia-100 text-purple-800 px-2 py-1 rounded shadow-sm text-xs font-bold border border-purple-200" onclick="toggleMode()">难度：${modeBtnStr} 🔄</button>` : ''}</div></div><div class="flex gap-2">${!isMe ? `<button class="flex-1 bg-indigo-600 text-white font-bold py-2 rounded text-sm shadow mb-0" onclick="switchUser('${u.uid}')">🔄 登录</button>` : ''}<button class="flex-1 bg-rose-100 text-rose-700 font-bold py-2 rounded text-sm shadow-sm mb-0" onclick="clearUserStep1('${u.uid}','${u.name}')">🗑️ 清零充置</button></div></div>`; }).join(''); }
 function switchUser(uid) { loadBooks(); loadUser(uid); queue=buildQueue(); qi=0; renderPet(); renderBookTabs(); showCard(); renderStats(); renderUserCards(); refreshList(); }
 async function clearUserStep1(uid, name) { if (!(await Dialog.confirm(`确定清除【${name}】的所有进度？`))) return; const t = await Dialog.prompt(`输入「${name}」确认：`); if (t !== name) { await Dialog.alert('❌ 输入错误'); return; } const ws = localStorage.getItem(wKey(uid)); if (ws) { const wd = JSON.parse(ws); wd.forEach(w => { w.level = 0; w.nextReview = Date.now(); }); localStorage.setItem(wKey(uid), JSON.stringify(wd)); } localStorage.removeItem(pKey(uid)); loadBooks(); if (uid === currentUid) { loadUser(uid); queue=buildQueue(true); qi=0; renderPet(); renderBookTabs(); showCard(); renderStats(); } renderUserCards(); refreshList(); await Dialog.alert(`✅ 已彻底清空！`); }
-
-function refreshList() { 
-    const cb = books.find(b=>b.id===currentBookId); const bw = words.filter(w => w.bookId === currentBookId); 
-    document.getElementById('wcnt').textContent = bw.length; document.getElementById('wcntBook').textContent = cb ? cb.name : '默认'; 
-    document.getElementById('wlist').innerHTML = bw.map(w => {
-        // 如果是网图，就渲染个小圆图，否则渲染 Emoji
-        let eHtml = w.emoji && w.emoji.startsWith('http') ? `<img src="${w.emoji}" class="w-6 h-6 rounded-full object-cover">` : `<span class="w-6 h-6 inline-block text-center">${w.emoji||'📝'}</span>`;
-        return `<div class="wi"><span class="we flex items-center justify-center">${eHtml}</span><span class="wn">${w.english}</span><span class="wz">${w.chinese}</span><span class="ws">${'⭐'.repeat(Math.min(w.level,5))}</span><button class="we-btn" onclick="editWord('${w.id}')">改</button><button class="wd" onclick="deleteWord('${w.id}')">删</button></div>`;
-    }).join(''); 
-}
-
-async function editWord(id) { 
-    const w = words.find(w => w.id === id); if (!w) return; 
-    const ne = await Dialog.prompt('英文：', w.english); if (ne === null) return; 
-    const nz = await Dialog.prompt('中文：', w.chinese); if (nz === null) return; 
-    const nEmo = await Dialog.prompt('配图(Emoji/网址/或【留空直接搜网图】)：', w.emoji); if (nEmo === null) return; 
-    
-    let en = ne.trim() || w.english, zh = nz.trim() || w.chinese, emo = nEmo.trim(); 
-    
-    // 如果编辑时留空，就去网上硬找！
-    if (!emo) {
-        Dialog.alert('⏳ 正在搜索真实图片...');
-        emo = await fetchWikiImage(en) || autoEmoji(en);
-    }
-
-    USERS.forEach(u => { const ws = localStorage.getItem(wKey(u.uid)); if (!ws) return; const arr = JSON.parse(ws); const idx = arr.findIndex(x => x.id === id); if (idx === -1) return; arr[idx].english = en; arr[idx].chinese = zh; arr[idx].emoji = emo; localStorage.setItem(wKey(u.uid), JSON.stringify(arr)); if (u.uid === currentUid) words = arr; }); 
-    if (queue[qi] !== undefined && words[queue[qi]]?.id === id) showCard(); 
-    refreshList(); renderStats(); 
-}
+function refreshList() { const cb = books.find(b=>b.id===currentBookId); const bw = words.filter(w => w.bookId === currentBookId); document.getElementById('wcnt').textContent = bw.length; document.getElementById('wcntBook').textContent = cb ? cb.name : '默认'; document.getElementById('wlist').innerHTML = bw.map(w => { let eHtml = w.emoji && w.emoji.startsWith('http') ? `<img src="${w.emoji}" class="w-6 h-6 rounded-full object-cover">` : `<span class="w-6 h-6 inline-block text-center">${w.emoji||'📝'}</span>`; return `<div class="wi"><span class="we flex items-center justify-center">${eHtml}</span><span class="wn">${w.english}</span><span class="wz">${w.chinese}</span><span class="ws">${'⭐'.repeat(Math.min(w.level,5))}</span><button class="we-btn" onclick="editWord('${w.id}')">改</button><button class="wd" onclick="deleteWord('${w.id}')">删</button></div>`; }).join(''); }
+async function editWord(id) { const w = words.find(w => w.id === id); if (!w) return; const ne = await Dialog.prompt('英文：', w.english); if (ne === null) return; const nz = await Dialog.prompt('中文：', w.chinese); if (nz === null) return; const nEmo = await Dialog.prompt('配图(Emoji/网址/或【留空直接搜图】)：', w.emoji); if (nEmo === null) return; let en = ne.trim() || w.english, zh = nz.trim() || w.chinese, emo = nEmo.trim(); if (!emo) { Dialog.alert('⏳ 去维基百科扒高清图中...'); emo = await fetchWikiImage(en) || autoEmoji(en); } USERS.forEach(u => { const ws = localStorage.getItem(wKey(u.uid)); if (!ws) return; const arr = JSON.parse(ws); const idx = arr.findIndex(x => x.id === id); if (idx === -1) return; arr[idx].english = en; arr[idx].chinese = zh; arr[idx].emoji = emo; localStorage.setItem(wKey(u.uid), JSON.stringify(arr)); if (u.uid === currentUid) words = arr; }); if (queue[qi] !== undefined && words[queue[qi]]?.id === id) showCard(); refreshList(); renderStats(); }
 async function deleteWord(id) { if(!(await Dialog.confirm('确定删除吗？'))) return; USERS.forEach(u => { const ws = localStorage.getItem(wKey(u.uid)); if (!ws) return; const arr = JSON.parse(ws).filter(w => w.id !== id); localStorage.setItem(wKey(u.uid), JSON.stringify(arr)); if (u.uid === currentUid) words = arr; }); queue = buildQueue(); qi = 0; refreshList(); renderStats(); showCard(); }
-
-// 🌟🌟🌟 神级批量捞图引擎 
-async function importWords() { 
-    const raw = document.getElementById('ta').value.trim(); if (!raw) return; 
-    
-    Dialog.alert('🔍 正在去全网搜图，时间较长，请千万不要关闭网页...');
-    
-    let ok=0; const p = []; 
-    raw.split('\n').forEach(l => { 
-        const pp = l.trim().split(/[,，]/); 
-        if(pp.length>=2) p.push({ en:pp[0].trim(), zh:pp[1].trim(), emo:pp[2]?.trim() }); 
-    }); 
-    if (!p.length) return; 
-    
-    // 我们用循环逐个请求，避免被封 IP
-    for (let i = 0; i < p.length; i++) {
-        if (!p[i].emo) {
-            p[i].emo = await fetchWikiImage(p[i].en) || autoEmoji(p[i].en);
-        }
-    }
-    
-    USERS.forEach(u => { 
-        const ws = localStorage.getItem(wKey(u.uid)); const arr = ws ? JSON.parse(ws) : []; 
-        p.forEach(({en, zh, emo}) => { const dup = arr.find(w => w.english.toLowerCase()===en.toLowerCase() && w.bookId===currentBookId); if (!dup) { arr.push({ id:'w_'+Date.now()+'_'+Math.random().toString(36).slice(2), english:en, chinese:zh, emoji:emo, level:0, nextReview:Date.now(), bookId:currentBookId }); if(u.uid===currentUid) ok++; } }); 
-        localStorage.setItem(wKey(u.uid), JSON.stringify(arr)); if(u.uid===currentUid) words = arr; 
-    }); 
-    document.getElementById('ta').value = ''; Dialog.alert(`✅ 成功导入 ${ok} 个新词，网图已拉取完毕！`); refreshList(); queue = buildQueue(); qi = 0; showCard(); renderStats(); 
-}
-
+async function importWords() { const raw = document.getElementById('ta').value.trim(); if (!raw) return; Dialog.alert('🔍 正在全网找图，别关网页...'); let ok=0; const p = []; raw.split('\n').forEach(l => { const pp = l.trim().split(/[,，]/); if(pp.length>=2) p.push({ en:pp[0].trim(), zh:pp[1].trim(), emo:pp[2]?.trim() }); }); if (!p.length) return; for (let i = 0; i < p.length; i++) { if (!p[i].emo) p[i].emo = await fetchWikiImage(p[i].en) || autoEmoji(p[i].en); } USERS.forEach(u => { const ws = localStorage.getItem(wKey(u.uid)); const arr = ws ? JSON.parse(ws) : []; p.forEach(({en, zh, emo}) => { const dup = arr.find(w => w.english.toLowerCase()===en.toLowerCase() && w.bookId===currentBookId); if (!dup) { arr.push({ id:'w_'+Date.now()+'_'+Math.random().toString(36).slice(2), english:en, chinese:zh, emoji:emo, level:0, nextReview:Date.now(), bookId:currentBookId }); if(u.uid===currentUid) ok++; } }); localStorage.setItem(wKey(u.uid), JSON.stringify(arr)); if(u.uid===currentUid) words = arr; }); document.getElementById('ta').value = ''; Dialog.alert(`✅ 导入 ${ok} 词，配图已保存！`); refreshList(); queue = buildQueue(); qi = 0; showCard(); renderStats(); }
 function renderBookTabs() { document.getElementById('bookTabs').innerHTML = books.map(b => `<button class="bg-slate-100 px-3 py-1 rounded font-bold text-slate-700${b.id===currentBookId?' ring-2 ring-indigo-400':''}" onclick="switchBook('${b.id}')">${b.name} (${words.filter(w=>w.bookId===b.id).length})</button>`).join(''); document.getElementById('curBookLabel').textContent = books.find(b=>b.id===currentBookId)?.name || '默认'; }
 function switchBook(id) { currentBookId = id; localStorage.setItem('mw_cbook_'+currentUid, id); queue=buildQueue(); qi=0; renderBookTabs(); refreshList(); renderStats(); showCard(); }
 async function createBook() { const n=await Dialog.prompt('新词库名：'); if(!n||!n.trim())return; const id='b_'+Date.now(); books.push({id, name:n.trim()}); saveBooks(); switchBook(id); }
 async function renameBook() { const cb=books.find(b=>b.id===currentBookId); if(!cb)return; const n=await Dialog.prompt('重命名：',cb.name); if(n&&n.trim()){cb.name=n.trim(); saveBooks(); renderBookTabs();} }
-async function deleteBook() { if(books.length<=1){await Dialog.alert('至少保留1个词库');return;} if(currentBookId === 'default') {await Dialog.alert('默认不可删！');return;} if(!(await Dialog.confirm('⚠️ 删除所有词？'))) return; USERS.forEach(u=>{ const ws=localStorage.getItem(wKey(u.uid)); if(ws){ const arr=JSON.parse(ws).filter(w=>w.bookId!==currentBookId); localStorage.setItem(wKey(u.uid),JSON.stringify(arr)); if(u.uid===currentUid)words=arr; } }); books=books.filter(b=>b.id!==currentBookId); saveBooks(); currentBookId=books[0].id; localStorage.setItem('mw_cbook_',currentBookId); queue=buildQueue(); qi=0; renderBookTabs(); refreshList(); renderStats(); showCard(); }
-function petTap() { const st = getPetStage(); const msgs = ['哎呀，点我干嘛！', '快去捞金币！', 'Bug 都被消灭空了！', '吃苹果！']; if(player.ownsCrown) msgs.push('膜拜吧！理财带师💰'); if(st.level >= 4) msgs.push('鲨鱼来啦！🦈'); const el = document.createElement('div'); el.textContent = msgs[Math.floor(Math.random() * msgs.length)]; el.style.cssText = 'position:fixed; top:20%; left:50%; transform:translateX(-50%); background:white; color:#333; font-weight:bold; padding:10px 20px; border-radius:16px; box-shadow:0 10px 20px rgba(0,0,0,0.1); z-index:9999; animation:flyup 1.8s forwards; font-size:0.9rem; pointer-events:none;'; document.body.appendChild(el); setTimeout(()=>el.remove(), 1800); }
+async function deleteBook() { if(books.length<=1){await Dialog.alert('至少留1个词库');return;} if(currentBookId === 'default') {await Dialog.alert('系统词库不可删！');return;} if(!(await Dialog.confirm('⚠️ 删除它及下面所有的词？'))) return; USERS.forEach(u=>{ const ws=localStorage.getItem(wKey(u.uid)); if(ws){ const arr=JSON.parse(ws).filter(w=>w.bookId!==currentBookId); localStorage.setItem(wKey(u.uid),JSON.stringify(arr)); if(u.uid===currentUid)words=arr; } }); books=books.filter(b=>b.id!==currentBookId); saveBooks(); currentBookId=books[0].id; localStorage.setItem('mw_cbook_',currentBookId); queue=buildQueue(); qi=0; renderBookTabs(); refreshList(); renderStats(); showCard(); }
+function petTap() { const st = getPetStage(); const msgs = ['嗨，点我干嘛！', '我要金币买苹果！', '快按住麦克风说话！']; if(player.ownsCrown) msgs.push('膜拜吧！理财带师💰'); if(st.level >= 4) msgs.push('鲨鱼来啦！🦈'); const el = document.createElement('div'); el.textContent = msgs[Math.floor(Math.random() * msgs.length)]; el.style.cssText = 'position:fixed; top:20%; left:50%; transform:translateX(-50%); background:white; color:#333; font-weight:bold; padding:10px 20px; border-radius:16px; box-shadow:0 10px 20px rgba(0,0,0,0.1); z-index:9999; animation:flyup 1.8s forwards; font-size:0.9rem; pointer-events:none;'; document.body.appendChild(el); setTimeout(()=>el.remove(), 1800); }
 function init() { loadUsersData(); loadBooks(); loadUser(currentUid); renderPet(); document.getElementById('accentBtn').textContent = ttsAccent===2 ? 'US' : 'UK'; queue=buildQueue(); qi=0; showCard(); renderStats(); }
-
 init();
