@@ -112,12 +112,12 @@ const saveP = function() { localStorage.setItem(pKey(currentUid), JSON.stringify
 const saveBooks = function() { localStorage.setItem('mw_books', JSON.stringify(books)); };
 
 function loadBooks() { 
-    books = safeParseJSON(localStorage.getItem('mw_books'), [{id:'default', name:'默认词库'}]);
-    let hasDefault = false;
-    for(let i=0; i<books.length; i++) { if(books[i].id === 'default') hasDefault = true; }
-    if (!hasDefault) books.unshift({id:'default', name:'默认词库'});
+    books = safeParseJSON(localStorage.getItem('mw_books'), []);
+    // 现在不再强制锁死 'default' 了，只判断如果所有词库都被删光了，才补一个保底的
+    if (books.length === 0) {
+        books.push({id:'default', name:'综合词库'});
+    }
 }
-
 function loadUser(uid) { 
     currentUid = uid; localStorage.setItem('mw_cur', uid); 
     const ws = localStorage.getItem(wKey(uid)); 
@@ -530,10 +530,30 @@ async function renameBook() {
     if(n&&n.trim()){ cb.name=n.trim(); saveBooks(); renderBookTabs(); } 
 }
 async function deleteBook() { 
-    if(books.length <= 1){ await Dialog.alert('至少保留1个系统词库哦'); return; } 
-    if(currentBookId === 'default') { await Dialog.alert('这个默认库不可删！'); return; } 
-    if(!(await Dialog.confirm('⚠️ 警告：删除该库会清空里面所有的单词？'))) return; 
+    if(books.length <= 1){ await Dialog.alert('哪怕是换词库，系统也规定至少得保留1个哦（请新建一个再来删这个）。'); return; } 
+    // 【以前这里有一行专门拦截 default 的防护墙，现在已经被我拆了！】
     
+    let cb = null; 
+    for(let i=0; i<books.length; i++) { if(books[i].id === currentBookId) cb = books[i]; }
+    
+    // 第一重锁：常规文字警告
+    if(!(await Dialog.confirm('⚠️ 极度危险：确定要删除【' + cb.name + '】吗？\n里面的单词将全部被清理！'))) return; 
+    
+    // 第二重锁：物理互换确认与取消按钮
+    const btnContainer = document.getElementById('sysModalConfirm').parentElement;
+    btnContainer.style.flexDirection = 'row-reverse'; 
+    const step2 = await Dialog.confirm('🚨 再次确认：删除后【绝对无法恢复】！\n(请注意下方按钮位置已互换，确定要删吗？)');
+    btnContainer.style.flexDirection = ''; 
+    if(!step2) return;
+
+    // 第三重锁：终极手写签发指令
+    const t = await Dialog.prompt('🔐 终极安全锁：\n必须一字不差地输入词库名称以执行删除：\n【' + cb.name + '】');
+    if (t !== cb.name) {
+        await Dialog.alert('❌ 输入错误，安全系统已拦截删除操作！'); 
+        return;
+    }
+    
+    // 三重验证全过，正式执行删除
     USERS.forEach(function(u) { 
         const ws = localStorage.getItem(wKey(u.uid)); 
         if(ws) { 
@@ -547,7 +567,6 @@ async function deleteBook() {
     saveBooks(); currentBookId = books[0].id; localStorage.setItem('mw_cbook_', currentBookId); 
     queue = buildQueue(); qi = 0; renderBookTabs(); refreshList(); renderStats(); showCard(); 
 }
-
 function petTap() { 
     const st = getPetStage(); const msgs = ['哎呀，别戳我！', '金币能让小怪兽长大！', '快去买零食喂我！']; 
     if(player.ownsCrown) msgs.push('膜拜土豪理财大师💰'); 
