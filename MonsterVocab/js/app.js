@@ -4,14 +4,13 @@
 window.onerror = function(message, source, lineno, colno, error) {
     const errDiv = document.createElement('div');
     errDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; padding:15px; background-color:#ef4444; color:white; font-size:12px; z-index:99999; word-break:break-all; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.3);';
-    errDiv.innerHTML = `⚠️ <b>系统崩溃拦截：</b><br>${message}<br>请截图反馈！(行: ${lineno})`;
+    errDiv.innerHTML = `⚠️ <b>系统错误拦截：</b><br>${message}<br>请截图反馈！(行: ${lineno})`;
     document.body.appendChild(errDiv);
-    // 强行清理一次可能导致崩溃的缓存
     localStorage.removeItem('mw_mic');
 };
 
 /* ═══════════════════════════════════════════════
-   1. 🧨 PWA 缓存粉碎机 (强行注销旧版保安)
+   1. 🧨 PWA 缓存清理
    ═══════════════════════════════════════════════ */
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(function(registrations) {
@@ -20,7 +19,7 @@ if ('serviceWorker' in navigator) {
 }
 
 /* ═══════════════════════════════════════════════
-   2. 全局弹窗与核心 CSS 样式 
+   2. 全局弹窗系统 (与 index.html 匹配)
    ═══════════════════════════════════════════════ */
 const Dialog = { 
     show: function(title, type, defaultVal) { 
@@ -44,18 +43,8 @@ const Dialog = {
     prompt: function(title, def) { return this.show(title, 'prompt', def); } 
 };
 
-const keyf = document.createElement('style');
-keyf.innerHTML = `
-.w-emo.off { opacity: 0 !important; filter: none !important; transform: scale(0.5) !important; pointer-events: none; }
-.w-zh.off { opacity: 0 !important; transform: translateY(15px) !important; pointer-events: none; }
-.w-emo, .w-zh { transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important; }
-@keyframes flyup { 0%{opacity:1; transform:translate(-50%,-50%) scale(1);} 100%{opacity:0; transform:translate(-50%,-150%) scale(1.5);} } 
-@keyframes dropFade { 0%{opacity:0;transform:translate(-50%,-100vh) scale(0.5)} 30%{opacity:1;transform:translate(-50%,-50%) scale(1.2)} 70%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%, -50%) scale(0)} }
-`;
-document.head.appendChild(keyf);
-
 /* ═══════════════════════════════════════════════
-   3. 维基百科溯源引擎 (向下兼容写法)
+   3. 维基百科溯源引擎
    ═══════════════════════════════════════════════ */
 const EMOJI = { apple:'🍎',banana:'🍌',cat:'🐱',dog:'🐶',elephant:'🐘',fish:'🐟',tiger:'🐅',lion:'🐅',car:'🚗',bus:'🚌' }; 
 function autoEmoji(en) { return EMOJI[en.toLowerCase().trim()] || '📝'; }
@@ -72,23 +61,27 @@ async function fetchWikiImage(word) {
                 return pages[pageId].thumbnail.source; 
             } 
         }
-    } catch(e) { console.warn('维基获取失败:', e); } 
+    } catch(e) { console.warn('维基获取被拦截:', e); } 
     return null; 
 }
 
 /* ═══════════════════════════════════════════════
-   4. 核心系统与储存引擎 (全面移除 ?. 可选链语法)
+   4. 核心系统与储存引擎
    ═══════════════════════════════════════════════ */
-// 安全的数据解析
 function safeParseJSON(str, fallback) {
     if (!str) return fallback;
     try { return JSON.parse(str); } catch (e) { return fallback; }
 }
 
 let ttsAccent = parseInt(localStorage.getItem('mw_accent') || '2'); 
-function toggleAccent() { ttsAccent = ttsAccent === 2 ? 1 : 2; localStorage.setItem('mw_accent', ttsAccent); document.getElementById('accentBtn').textContent = ttsAccent === 2 ? 'US' : 'UK'; }
+function toggleAccent(e) { 
+    if(e) e.stopPropagation();
+    ttsAccent = ttsAccent === 2 ? 1 : 2; 
+    localStorage.setItem('mw_accent', ttsAccent); 
+    document.getElementById('accentBtn').textContent = ttsAccent === 2 ? 'US' : 'UK'; 
+}
 
-const PET_STAGES = [ { level: 1, text: 'Lv.1 魔法神蛋', ico: '🥚', sub: '刚出生，急需营养～', threshold: 0 }, { level: 2, text: 'Lv.2 贪吃小恐龙', ico: '🦖', sub: '破壳啦！解锁商店装备！', threshold: 50 }, { level: 3, text: 'Lv.3 快乐独角兽', ico: '🦄', sub: '神奇魔法觉醒！', threshold: 3000 }, { level: 4, text: 'Lv.4 巡洋大头鲨', ico: '🦈', sub: '大富翁！金币收益翻倍！', threshold: 8000 }, { level: 5, text: 'Lv.5 许愿神龙', ico: '🐉', sub: '巅峰连胜！去找爸妈许愿！', threshold: 25000 } ]; 
+const PET_STAGES = [ { level: 1, text: 'Lv.1 魔法神蛋', ico: '🥚', sub: '刚出生，急需营养～', threshold: 0 }, { level: 2, text: 'Lv.2 贪吃小黑龙', ico: '🦖', sub: '破壳啦！解锁商店装备！', threshold: 50 }, { level: 3, text: 'Lv.3 独角兽', ico: '🦄', sub: '神奇魔法觉醒！', threshold: 3000 }, { level: 4, text: 'Lv.4 大头鲨', ico: '🦈', sub: '大富翁！金币收益翻倍！', threshold: 8000 }, { level: 5, text: 'Lv.5 许愿神龙', ico: '🐉', sub: '巅峰连胜！去找爸妈许愿！', threshold: 25000 } ]; 
 const FULLNESS_CAP = 300; 
 
 let USERS = []; 
@@ -112,10 +105,10 @@ const saveP = function() { localStorage.setItem(pKey(currentUid), JSON.stringify
 const saveBooks = function() { localStorage.setItem('mw_books', JSON.stringify(books)); };
 
 function loadBooks() { 
-    books = safeParseJSON(localStorage.getItem('mw_books'), [{id:'default', name:'默认词库'}]);
+    books = safeParseJSON(localStorage.getItem('mw_books'), [{id:'default', name:'综合词库'}]);
     let hasDefault = false;
     for(let i=0; i<books.length; i++) { if(books[i].id === 'default') hasDefault = true; }
-    if (!hasDefault) books.unshift({id:'default', name:'默认词库'});
+    if (!hasDefault) books.unshift({id:'default', name:'综合词库'});
 }
 
 function loadUser(uid) { 
@@ -125,9 +118,7 @@ function loadUser(uid) {
         words = safeParseJSON(ws, []); 
         words.forEach(function(w) { if (!w.bookId) w.bookId='default'; }); 
         saveW(); 
-    } else { 
-        words = []; saveW(); 
-    } 
+    } else { words = []; saveW(); } 
     const ps = localStorage.getItem(pKey(uid)); 
     player = safeParseJSON(ps, {}); 
     if(player.dailyNew===undefined) player.dailyNew = 10; 
@@ -188,8 +179,10 @@ function act(action) {
 function earnCoins(amount) { 
     player.coins += amount; saveP(); renderPet(); 
     const el = document.createElement('div'); el.textContent = `+${amount}💰`; 
-    el.style.cssText = 'position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);color:#eab308;font-weight:900;font-size:2rem;text-shadow:0 2px 4px rgba(0,0,0,0.2);z-index:99;animation:flyup 0.8s ease-out forwards;pointer-events:none;'; 
-    document.body.appendChild(el); setTimeout(function() { el.remove(); }, 800); 
+    el.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);color:#f59e0b;font-weight:900;font-size:2.5rem;text-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:9999;transition:all 0.8s ease-out;pointer-events:none;'; 
+    document.body.appendChild(el); 
+    setTimeout(function() { el.style.transform = 'translate(-50%, -150px) scale(1.5)'; el.style.opacity = '0'; }, 30);
+    setTimeout(function() { el.remove(); }, 800); 
 }
 
 async function processDailyCheckIn() { 
@@ -200,18 +193,25 @@ async function processDailyCheckIn() {
     player.lastCheckIn = todayStr; let bonus = 10; 
     if(player.streak === 2) bonus = 30; if(player.streak >= 3) bonus = player.ownsCrown ? 80 : 50; 
     player.coins += bonus; saveP(); renderPet(); 
-    setTimeout(function() { Dialog.alert(`<span class="text-3xl">🔥</span> 连胜 <b>${player.streak}</b> 天！<br><br>获得：<b class="text-yellow-600">+${bonus} 金币</b>！<br><span class="text-xs text-slate-500">${player.ownsCrown ? '👑 皇家特权生效' : ''}</span>`); }, 1500); 
+    setTimeout(function() { Dialog.alert(`🎉 每日签到！<br>连续登录 <b>${player.streak}</b> 天<br>奖励 <b style="color:#eab308;">+${bonus} 金币</b>！<br><span style="font-size:12px;color:#94a3b8;">${player.ownsCrown ? '👑 皇家特权加成' : ''}</span>`); }, 1500); 
 }
 
-const SHOP_ITEMS = [ { id: 'f1', type: 'food', icon: '🍪', name: '怪兽小饼干', desc: '充饥变大', price: 10, val: 20 }, { id: 'f2', type: 'food', icon: '🍎', name: '魔法红苹果', desc: '大量充饥', price: 25, val: 60 }, { id: 'o1', type: 'o2o',  icon: '📺', name: '10 分钟动画片', desc: '兑现实特权', price: 80 }, { id: 'o2', type: 'o2o',  icon: '⭐', name: '家庭积分星', desc: '换实物大奖', price: 100 }, { id: 'c1', type: 'crown',icon: '👑', name: '永久国王皇冠', desc: '全勤暴增神装', price: 800 } ];
+const SHOP_ITEMS = [ 
+    { id: 'f1', type: 'food', icon: '🍪', name: '怪兽小饼干', desc: '充饥变大', price: 10, val: 20 }, 
+    { id: 'f2', type: 'food', icon: '🍎', name: '魔法红苹果', desc: '大量充饥', price: 25, val: 60 }, 
+    { id: 'o1', type: 'o2o',  icon: '📺', name: '看10分钟电视', desc: '兑换现实特权', price: 80 }, 
+    { id: 'o2', type: 'o2o',  icon: '⭐', name: '购买小红花', desc: '集齐换实物大奖', price: 100 }, 
+    { id: 'c1', type: 'crown',icon: '👑', name: '国王发财皇冠', desc: '永久增加签到金币', price: 800 } 
+];
 
-function openShop() { 
+function openShop(e) { 
+    if(e) e.stopPropagation();
     document.getElementById('shopCoinDisplay').textContent = player.coins; 
     const list = document.getElementById('shopRenderArea'); list.innerHTML = ''; 
     SHOP_ITEMS.forEach(function(it) { 
         if(it.type === 'crown' && player.ownsCrown) return; 
         const canBuy = player.coins >= it.price; const div = document.createElement('div'); div.className = 'shop-item'; 
-        div.innerHTML = `<div class="flex items-center gap-3"><div class="text-3xl">${it.icon}</div><div><div class="font-bold text-slate-800">${it.name}</div><div class="text-xs text-slate-500">${it.desc}</div></div></div><button class="buy-btn ${canBuy?'':'opacity-50 cursor-not-allowed'}" ${canBuy ? `onclick="buyItem('${it.id}')"` : 'disabled'}>${it.price} 币</button>`; 
+        div.innerHTML = `<div style="display:flex;align-items:center;gap:12px;"><div style="font-size:2rem;">${it.icon}</div><div><div style="font-weight:900;color:#1e293b;font-size:1.1rem;">${it.name}</div><div style="font-size:0.75rem;color:#64748b;">${it.desc}</div></div></div><button class="buy-btn" ${canBuy ? `onclick="buyItem('${it.id}')"` : 'disabled'}>${it.price} 币</button>`; 
         list.appendChild(div); 
     }); 
     document.getElementById('shopOv').classList.add('open'); 
@@ -220,7 +220,6 @@ function openShop() {
 function closeShop() { document.getElementById('shopOv').classList.remove('open'); }
 
 async function buyItem(id) { 
-    // 下面不再使用高级箭头函数查找，改为基础循环寻找确保老平板不崩溃
     let item = null;
     for(let i=0; i<SHOP_ITEMS.length; i++) { if(SHOP_ITEMS[i].id === id) item = SHOP_ITEMS[i]; }
     if(!item || player.coins < item.price) return; 
@@ -228,40 +227,103 @@ async function buyItem(id) {
     if(item.type === 'food') { 
         if(player.fullness >= FULLNESS_CAP) { await Dialog.alert("✋ 肚子圆滚滚啦，吃不下啦！"); return; } 
         let oS = getPetStage(); player.coins -= item.price; let eat = Math.min(item.val, FULLNESS_CAP - player.fullness); player.fullness += eat; player.totalFed += eat; saveP(); renderPet(); closeShop(); 
-        const fEl = document.createElement('div'); fEl.textContent = item.icon; fEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:5rem;z-index:999;animation:dropFade 1s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events:none;'; document.body.appendChild(fEl); 
+        
+        const fEl = document.createElement('div'); fEl.textContent = item.icon; fEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:6rem;z-index:999;transition:all 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);pointer-events:none;'; 
+        document.body.appendChild(fEl); 
+        setTimeout(function() { fEl.style.transform = 'translate(-50%, -100vh) scale(0)'; fEl.style.opacity = '0'; }, 50);
+
         let nS = getPetStage(); 
         setTimeout(async function() { 
             fEl.remove(); 
             if(nS.level > oS.level) { 
                 document.getElementById('lutIco').textContent = nS.ico; document.getElementById('lutTtl').textContent = nS.text + ' 降临！'; document.getElementById('lutSub').textContent = nS.sub; document.getElementById('lut').classList.add('show'); 
-                try { confetti({particleCount:80, spread:100, origin:{y:.5}, colors:['#FFB3C6','#C8B6FF','#BBD0FF','#FFEAA7']}); } catch(e){} 
+                try { confetti({particleCount:80, spread:100, origin:{y:.5}, colors:['#FFB3C6','#C8B6FF','#BBD0FF','#fbbf24']}); } catch(e){} 
             } else { await Dialog.show(`😋 吃饱了！<br>当前总重: ${player.totalFed}`, 'alert'); } 
         }, 1100); 
     } else if(item.type === 'o2o') { 
-        if(await Dialog.confirm(`⚠️ 消 ${item.price} 金币兑换【${item.name}】？`)) { 
+        if(await Dialog.confirm(`确定花费 ${item.price} 金币兑换【${item.name}】？`)) { 
             player.coins -= item.price; saveP(); renderPet(); closeShop(); 
             try { confetti({particleCount:150, zIndex: 9999, spread:120, origin:{y:.5}}); } catch(e){} 
-            await Dialog.alert(`<span class="text-4xl block mb-4 mt-2">🎉 兑换成功！</span><br><b class="text-rose-600 outline px-2 shadow">请向爸妈展示本界面核销！</b><br><br>【${item.name}】`); 
+            await Dialog.alert(`<span style="font-size:1.5rem;font-weight:900;color:#ef4444;">🎉 兑换成功！</span><br><br><b>【${item.name}】</b><br><br><span style="font-size:12px;color:#64748b;">请向爸爸妈妈展示本界面进行现实核销！</span>`); 
         } 
     } else if(item.type === 'crown') { 
-        if(await Dialog.confirm(`👑 800币购买皇冠发财机？`)) { 
+        if(await Dialog.confirm(`花费 800 币购买皇冠发财机？`)) { 
             player.coins -= item.price; player.ownsCrown = true; saveP(); renderPet(); closeShop(); 
             try { confetti({particleCount:200, zIndex: 9999, spread:160, origin:{y:.5}}); } catch(e){} 
-            await Dialog.alert(`👑👑👑<br>王登基了！`); 
+            await Dialog.alert(`👑👑👑<br>王登基了！连胜金币大涨！`); 
         } 
     } 
 }
 
 /* ═══════════════════════════════════════════════
-   6. 🔊 纯净原生发音引擎
+   6. 🔊 全新原生 Web Speech 发音引擎 (自然语调版)
    ═══════════════════════════════════════════════ */
 function getPhonics(en) { return ''; } 
-async function autoSpeakEn(text) { return new Promise(function(r) { const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=${ttsAccent}`; try { const a = new Audio(url); a.onended=r; a.onerror=r; a.play().catch(r); } catch(err) { r(); } setTimeout(r, 1500); }); }
-async function autoSpeakZh(text) { return new Promise(function(r) { const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=zh`; try { const a = new Audio(url); a.onended=r; a.onerror=r; a.play().catch(r); } catch(err) { r(); } setTimeout(r, 1500); }); }
-async function speak(e) { e.stopPropagation(); if (qi >= queue.length) return; const w = words[queue[qi]]; if(player.quizMode === 'zh2en') { if(!shown) await autoSpeakZh(w.chinese); else await autoSpeakEn(w.english); } else { if(!shown) await autoSpeakEn(w.english); else await autoSpeakZh(w.chinese); } }
+
+async function autoSpeakEn(text) { 
+    return new Promise(function(r) { 
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // 强行打断上一个没播完的
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = ttsAccent === 1 ? 'en-GB' : 'en-US';
+            msg.rate = 0.85; // 稍微放慢，让孩子听得清
+            msg.pitch = 1.1; // 语调微提，听起来更亲切
+            msg.onend = r; msg.onerror = r;
+            window.speechSynthesis.speak(msg);
+            setTimeout(r, Math.max(2500, text.length * 200)); // 兜底防止意外卡死
+        } else {
+            // 老设备的有道备用方案
+            const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=${ttsAccent}`; 
+            try { const a = new Audio(url); a.onended=r; a.onerror=r; a.play().catch(r); } catch(err) { r(); } 
+        }
+    }); 
+}
+
+async function autoSpeakZh(text) { 
+    return new Promise(function(r) { 
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = 'zh-CN'; // 调用系统的中文引擎 (如苹果Siri, 微软晓晓, 华为小艺)
+            msg.rate = 0.9;     // 控制系统原生播讲语速
+            msg.pitch = 1.1; 
+            
+            // 尝试挑选优质声音 (如果有的话)
+            const voices = window.speechSynthesis.getVoices();
+            let bestVoice = null;
+            for(let i=0; i<voices.length; i++) {
+                let v = voices[i];
+                // 优先寻找微软晓晓、苹果婷婷等优质人声
+                if(v.lang.indexOf('zh') !== -1 && (v.name.indexOf('Xiaoxiao') !== -1 || v.name.indexOf('Ting-Ting') !== -1 || v.name.indexOf('Tingting') !== -1 || v.name.indexOf('Mei-Jia') !== -1)) {
+                    bestVoice = v; break;
+                }
+            }
+            if(bestVoice) msg.voice = bestVoice;
+
+            msg.onend = r; msg.onerror = r;
+            window.speechSynthesis.speak(msg);
+            setTimeout(r, Math.max(3000, text.length * 300));
+        } else {
+            // 最差的保底方案
+            const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=zh`; 
+            try { const a = new Audio(url); a.onended=r; a.onerror=r; a.play().catch(r); } catch(err) { r(); } 
+        }
+    }); 
+}
+
+async function speak(e) { 
+    if(e) e.stopPropagation(); 
+    if (qi >= queue.length) return; 
+    const w = words[queue[qi]]; 
+    if(player.quizMode === 'zh2en') { 
+        if(!shown) await autoSpeakZh(w.chinese); else await autoSpeakEn(w.english); 
+    } else { 
+        if(!shown) await autoSpeakEn(w.english); else await autoSpeakZh(w.chinese); 
+    } 
+}
 
 /* ═══════════════════════════════════════════════
-   7. 🎨 视图渲染主控：完全去除废弃权限逻辑
+   7. 🎨 视图渲染主控
    ═══════════════════════════════════════════════ */
 function renderPet() { 
     const st = getPetStage(); document.getElementById('petIco').textContent = st.ico; 
@@ -311,19 +373,16 @@ function showCard() {
   const wPh = document.getElementById('wPh'); const wZh = document.getElementById('wZh');
   
   if (w.emoji && w.emoji.indexOf('http') === 0) { 
-      wEmo.innerHTML = `<img src="${w.emoji}" class="w-32 h-32 md:w-40 md:h-40 rounded-[28px] object-cover border-4 border-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.15)] mx-auto">`; 
+      wEmo.innerHTML = `<img src="${w.emoji}" style="width:160px;height:160px;object-fit:cover;border-radius:28px;box-shadow:0 8px 15px rgba(0,0,0,0.1);display:inline-block;">`; 
   } else { 
-      wEmo.innerHTML = `<span style="font-size: 5rem;">${w.emoji || '📝'}</span>`; 
+      wEmo.innerHTML = w.emoji || '📝'; 
   }
   
   wEn.textContent = w.english; wPh.textContent = getPhonics(w.english); wZh.textContent = w.chinese;
   document.getElementById('lvBadge').textContent= 'Lv.'+w.level; 
   document.getElementById('acts').removeAttribute('hidden'); 
-  document.getElementById('sndBtn').style.display='flex';
-  
-  const hintContainer = document.getElementById('hint');
-  hintContainer.innerHTML = '<span class="text-slate-400 font-bold text-sm tracking-wide">👆 点击卡片翻看答案</span>';
-  hintContainer.style.opacity = '1';
+  document.getElementById('sndBtn').style.opacity = '1';
+  document.getElementById('hint').innerHTML = '👆 点击卡片翻看答案';
 
   if (player.quizMode === 'zh2en') {
       wEmo.classList.remove('off'); wZh.classList.remove('off'); 
@@ -339,7 +398,7 @@ function showCard() {
   const c=document.getElementById('card'); c.classList.remove('cin'); void c.offsetWidth; c.classList.add('cin');
 }
 
-function cardTap() {
+function cardTap(e) {
   if (qi >= queue.length) return; shown = !shown;
   
   const w = words[queue[qi]]; 
@@ -358,16 +417,17 @@ function cardTap() {
   }
 }
 
-function prevWord(e) { e.stopPropagation(); if (qi > 0) { qi--; showCard(); } }
+function prevWord(e) { if(e) e.stopPropagation(); if (qi > 0) { qi--; showCard(); } }
 
 function showDone() { 
-    document.getElementById('wEmo').innerHTML='<span style="font-size: 5rem;">🏆</span>'; 
+    document.getElementById('wEmo').innerHTML='🏆'; 
     document.getElementById('wEmo').classList.remove('off'); document.getElementById('wEn').textContent='太棒啦！'; 
-    document.getElementById('wPh').textContent=''; document.getElementById('wZh').textContent='快去给小怪兽买点零食！'; 
+    document.getElementById('wPh').textContent='今日学习任务完成'; document.getElementById('wZh').textContent='快去给小怪兽买点零食！'; 
     document.getElementById('wZh').classList.remove('off'); document.getElementById('hint').style.opacity= '0'; 
     document.getElementById('lvBadge').textContent='✨'; document.getElementById('wEn').style.opacity = '1'; 
-    document.getElementById('wEn').style.transform = 'translateY(0)'; document.getElementById('acts').setAttribute('hidden',''); 
-    document.getElementById('sndBtn').style.display='none'; document.getElementById('dots').innerHTML=''; 
+    document.getElementById('wEn').style.transform = 'translateY(0)'; document.getElementById('wPh').style.opacity = '1'; 
+    document.getElementById('acts').setAttribute('hidden',''); document.getElementById('sndBtn').style.opacity='0'; 
+    document.getElementById('dots').innerHTML=''; 
     renderStats(); const c=document.getElementById('card'); c.classList.remove('cin'); void c.offsetWidth; c.classList.add('cin'); 
     setTimeout(fireworks, 420); processDailyCheckIn(); 
 }
@@ -378,9 +438,9 @@ function fireworks() {
 }
 
 /* ═══════════════════════════════════════════════
-   8. ⚙️ 家长后勤系统 (支持纯净词库管理，无 ?. 语法)
+   8. ⚙️ 家长后勤系统 (支持纯净词库管理)
    ═══════════════════════════════════════════════ */
-function openGear() { renderUserCards(); renderBookTabs(); refreshList(); document.getElementById('ov').classList.add('open'); } 
+function openGear(e) { if(e) e.stopPropagation(); renderUserCards(); renderBookTabs(); refreshList(); document.getElementById('ov').classList.add('open'); } 
 function closeOv() { document.getElementById('ov').classList.remove('open'); } 
 function ovClick(e) { if(e.target.id==='ov') closeOv(); }
 
@@ -413,16 +473,33 @@ function renderUserCards() {
     document.getElementById('userCards').innerHTML = USERS.map(function(u) { 
         const pObj = safeParseJSON(localStorage.getItem(pKey(u.uid)), {dailyNew:10, dailyRev:30, streak:0, coins:0, quizMode:'en2zh'}); 
         const isMe = u.uid === currentUid; const modeBtnStr = (pObj.quizMode === 'zh2en') ? '中译英' : '英译中'; 
-        return `<div class="uc${isMe?' active-uc':''}" style="background:white;padding:12px;border-radius:12px;border:1px solid #e2e8f0;"><div class="flex justify-between items-center border-b pb-2 mb-2"><strong class="text-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1 rounded transition" onclick="renameUser('${u.uid}')">${u.ico} ${u.name} <span class="text-xs text-sky-500 font-normal">✎编辑</span></strong> ${isMe?'<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-bold">当前</span>':''}</div><div class="text-sm space-y-2 mb-3 text-slate-600"><div>🔥 连胜：<b class="text-rose-500">${pObj.streak||0} 天</b> | 💰 金币：<b class="text-amber-500">${pObj.coins||0}</b></div><div class="flex flex-wrap gap-2 pt-1 border-t border-slate-50 border-dashed"><button class="bg-slate-100 text-slate-700 px-2 py-1 rounded shadow-sm text-xs font-bold" onclick="setDailyPlan('new')">🎯新词 ${pObj.dailyNew||10}</button><button class="bg-slate-100 text-slate-700 px-2 py-1 rounded shadow-sm text-xs font-bold" onclick="setDailyPlan('rev')">🔄复习 ${pObj.dailyRev||30}</button>${isMe ? `<button class="bg-gradient-to-r from-purple-100 to-fuchsia-100 text-purple-800 px-2 py-1 rounded shadow-sm text-xs font-bold border border-purple-200" onclick="toggleMode()">难度：${modeBtnStr} 🔄</button>` : ''}</div></div><div class="flex gap-2">${!isMe ? `<button class="flex-1 bg-indigo-600 text-white font-bold py-2 rounded text-sm shadow mb-0" onclick="switchUser('${u.uid}')">🔄 登录</button>` : ''}<button class="flex-1 bg-rose-100 text-rose-700 font-bold py-2 rounded text-sm shadow-sm mb-0" onclick="clearUserStep1('${u.uid}','${u.name}')">🗑️ 清空进度</button></div></div>`; 
+        return `<div style="background:white;padding:12px;border-radius:12px;border:1px solid #e2e8f0; ${isMe ? 'border:2px solid #6366f1;' : ''}">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f5f9;padding-bottom:8px;margin-bottom:8px;">
+                <strong style="font-size:1.1rem;cursor:pointer;" onclick="renameUser('${u.uid}')">${u.ico} ${u.name} <span style="font-size:0.7rem;color:#3b82f6;font-weight:normal;">✎编辑</span></strong> 
+                ${isMe?`<span style="font-size:0.75rem;background:#e0e7ff;color:#4f46e5;padding:2px 8px;border-radius:6px;font-weight:bold;">当前在线</span>`:''}
+            </div>
+            <div style="font-size:0.85rem;color:#64748b;margin-bottom:12px;">
+                🔥 连胜：<b style="color:#ef4444;">${pObj.streak||0} 天</b> | 💰 金币：<b style="color:#f59e0b;">${pObj.coins||0}</b>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+                    <button style="background:#f1f5f9;padding:4px 8px;border-radius:6px;font-weight:bold;" onclick="setDailyPlan('new')">🎯新词 ${pObj.dailyNew||10}</button>
+                    <button style="background:#f1f5f9;padding:4px 8px;border-radius:6px;font-weight:bold;" onclick="setDailyPlan('rev')">🔄复习 ${pObj.dailyRev||30}</button>
+                    ${isMe ? `<button style="background:#e0e7ff;color:#4f46e5;padding:4px 8px;border-radius:6px;font-weight:bold;" onclick="toggleMode()">难度：${modeBtnStr} 🔄</button>` : ''}
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+                ${!isMe ? `<button style="flex:1;background:#4f46e5;color:white;font-weight:bold;padding:8px;border-radius:8px;" onclick="switchUser('${u.uid}')">🔄 登录此账号</button>` : ''}
+                <button style="flex:1;background:#fee2e2;color:#e11d48;font-weight:bold;padding:8px;border-radius:8px;" onclick="clearUserStep1('${u.uid}','${u.name}')">🗑️ 清空记录</button>
+            </div>
+        </div>`; 
     }).join(''); 
 }
 
 function switchUser(uid) { loadBooks(); loadUser(uid); queue=buildQueue(); qi=0; renderPet(); renderBookTabs(); showCard(); renderStats(); renderUserCards(); refreshList(); }
 
 async function clearUserStep1(uid, name) { 
-    if (!(await Dialog.confirm(`确定清除【${name}】所有的学习进度？`))) return; 
-    const t = await Dialog.prompt(`为防止误触，请输入「${name}」以确认：`); 
-    if (t !== name) { await Dialog.alert('❌ 校验失败'); return; } 
+    if (!(await Dialog.confirm(`确定彻底清除【${name}】所有的背词进度？`))) return; 
+    const t = await Dialog.prompt(`为防止误碰，请输入「${name}」确认：`); 
+    if (t !== name) { await Dialog.alert('❌ 校验不匹配，操作已取消'); return; } 
     const ws = localStorage.getItem(wKey(uid)); 
     if (ws) { 
         const wd = safeParseJSON(ws, []); 
@@ -431,7 +508,7 @@ async function clearUserStep1(uid, name) {
     } 
     localStorage.removeItem(pKey(uid)); loadBooks(); 
     if (uid === currentUid) { loadUser(uid); queue=buildQueue(true); qi=0; renderPet(); renderBookTabs(); showCard(); renderStats(); } 
-    renderUserCards(); refreshList(); await Dialog.alert(`✅ 已彻底清空本帐号！`); 
+    renderUserCards(); refreshList(); await Dialog.alert(`✅ 已彻底清空完毕！`); 
 }
 
 function refreshList() { 
@@ -441,8 +518,8 @@ function refreshList() {
     document.getElementById('wcnt').textContent = bw.length; 
     document.getElementById('wcntBook').textContent = cb ? cb.name : '默认'; 
     document.getElementById('wlist').innerHTML = bw.map(function(w) { 
-        let eHtml = (w.emoji && w.emoji.indexOf('http') === 0) ? `<img src="${w.emoji}" class="w-6 h-6 rounded-full object-cover border border-slate-200">` : `<span class="w-6 h-6 inline-block text-center">${w.emoji||'📝'}</span>`; 
-        return `<div class="wi"><span class="we flex items-center justify-center">${eHtml}</span><span class="wn">${w.english}</span><span class="wz">${w.chinese}</span><span class="ws">${'⭐'.repeat(Math.min(w.level,5))}</span><button class="we-btn" onclick="editWord('${w.id}')">改</button><button class="wd" onclick="deleteWord('${w.id}')">删</button></div>`; 
+        let eHtml = (w.emoji && w.emoji.indexOf('http') === 0) ? `<img src="${w.emoji}" style="width:24px;height:24px;border-radius:12px;object-fit:cover;">` : `<span style="font-size:1.2rem;">${w.emoji||'📝'}</span>`; 
+        return `<div class="wi"><span class="we" style="display:flex;justify-content:center;align-items:center;">${eHtml}</span><span class="wn">${w.english}</span><span class="wz">${w.chinese}</span><span class="ws">${'⭐'.repeat(Math.min(w.level,5))}</span><button class="we-btn" onclick="editWord('${w.id}')">改</button><button class="wd" onclick="deleteWord('${w.id}')">删</button></div>`; 
     }).join(''); 
 }
 
@@ -450,10 +527,10 @@ async function editWord(id) {
     let w = null; for(let i=0; i<words.length; i++) { if(words[i].id === id) w = words[i]; }
     if (!w) return; 
     const ne = await Dialog.prompt('英文：', w.english); if (ne === null) return; 
-    const nz = await Dialog.prompt('中文：', w.chinese); if (nz === null) return; 
-    const nEmo = await Dialog.prompt('图(填链接或直接留空以搜图)：', w.emoji); if (nEmo === null) return; 
+    const nz = await Dialog.prompt('中文含义：', w.chinese); if (nz === null) return; 
+    const nEmo = await Dialog.prompt('配图(可填网络图库链接，或直接留空让系统自动搜图)：', w.emoji); if (nEmo === null) return; 
     let en = ne.trim() || w.english, zh = nz.trim() || w.chinese, emo = nEmo.trim(); 
-    if (!emo) { Dialog.alert('⏳ 正在维基百科找图中...'); emo = await fetchWikiImage(en) || autoEmoji(en); } 
+    if (!emo) { document.getElementById('mmsg').innerHTML = '<span style="color:#f59e0b;font-weight:bold;">⏳ 正在维基百科为您提取配图中...</span>'; emo = await fetchWikiImage(en) || autoEmoji(en); document.getElementById('mmsg').textContent = '';} 
     USERS.forEach(function(u) { 
         const ws = localStorage.getItem(wKey(u.uid)); if (!ws) return; 
         const arr = safeParseJSON(ws, []); 
@@ -468,7 +545,7 @@ async function editWord(id) {
 }
 
 async function deleteWord(id) { 
-    if(!(await Dialog.confirm('确定删除吗？'))) return; 
+    if(!(await Dialog.confirm('确定要删除这个单词吗？'))) return; 
     USERS.forEach(function(u) { 
         const ws = localStorage.getItem(wKey(u.uid)); if (!ws) return; 
         const arr = safeParseJSON(ws, []).filter(function(w) { return w.id !== id; }); 
@@ -480,13 +557,13 @@ async function deleteWord(id) {
 
 async function importWords() { 
     const raw = document.getElementById('ta').value.trim(); if (!raw) return; 
-    Dialog.alert('🔍 正在全网下载高清网图，请勿刷新...', 'alert'); 
+    document.getElementById('mmsg').innerHTML = '<span style="color:#4f46e5;font-weight:bold;">⏳ 正在全网下载高清网图，由于网络原因请耐心等待，切勿关闭此窗口...</span>';
     let ok=0; const p = []; 
     raw.split('\n').forEach(function(l) { 
         const pp = l.trim().split(/[,，]/); 
         if(pp.length>=2) p.push({ en:pp[0].trim(), zh:pp[1].trim(), emo: (pp[2] ? pp[2].trim() : '') }); 
     }); 
-    if (!p.length) return; 
+    if (!p.length) { document.getElementById('mmsg').textContent = ''; return; }
     for (let i = 0; i < p.length; i++) { 
         if (!p[i].emo) p[i].emo = await fetchWikiImage(p[i].en) || autoEmoji(p[i].en); 
     } 
@@ -495,8 +572,8 @@ async function importWords() {
         const arr = safeParseJSON(ws, []); 
         p.forEach(function(item) { 
             let dup = false; 
-            for(let i=0; i<arr.length; i++) { 
-                if(arr[i].english.toLowerCase() === item.en.toLowerCase() && arr[i].bookId === currentBookId) dup = true; 
+            for(let j=0; j<arr.length; j++) { 
+                if(arr[j].english.toLowerCase() === item.en.toLowerCase() && arr[j].bookId === currentBookId) dup = true; 
             }
             if (!dup) { 
                 arr.push({ id:'w_'+Date.now()+'_'+Math.random().toString(36).slice(2), english:item.en, chinese:item.zh, emoji:item.emo, level:0, nextReview:Date.now(), bookId:currentBookId }); 
@@ -506,33 +583,35 @@ async function importWords() {
         localStorage.setItem(wKey(u.uid), JSON.stringify(arr)); 
         if(u.uid===currentUid) words = arr; 
     }); 
-    document.getElementById('ta').value = ''; Dialog.alert(`✅ 导入 ${ok} 个新词，配图已保存！`); 
+    document.getElementById('ta').value = ''; 
+    document.getElementById('mmsg').innerHTML = `<span style="color:#10b981;font-weight:bold;">✅ 导入成功！共录入 ${ok} 个新词，维基配图已绑定！</span>`;
+    setTimeout(function() { document.getElementById('mmsg').textContent = ''; }, 3000);
     refreshList(); queue = buildQueue(); qi = 0; showCard(); renderStats(); 
 }
 
 function renderBookTabs() { 
     document.getElementById('bookTabs').innerHTML = books.map(function(b) { 
         let count = 0; for(let i=0; i<words.length; i++) { if(words[i].bookId === b.id) count++; }
-        return `<button class="bg-slate-100 px-3 py-1 rounded font-bold text-slate-700${b.id===currentBookId?' ring-2 ring-indigo-400':''}" onclick="switchBook('${b.id}')">${b.name} (${count})</button>`;
+        return `<button style="background:${b.id===currentBookId?'#4f46e5':'#e2e8f0'};color:${b.id===currentBookId?'white':'#475569'};font-weight:bold;padding:4px 10px;border-radius:8px;font-size:0.85rem;" onclick="switchBook('${b.id}')">${b.name} <span style="font-size:0.7rem;">(${count})</span></button>`;
     }).join(''); 
     
-    let curName = '默认';
+    let curName = '默认词库';
     for(let i=0; i<books.length; i++) { if(books[i].id === currentBookId) curName = books[i].name; }
     document.getElementById('curBookLabel').textContent = curName; 
 }
 
 function switchBook(id) { currentBookId = id; localStorage.setItem('mw_cbook_'+currentUid, id); queue=buildQueue(); qi=0; renderBookTabs(); refreshList(); renderStats(); showCard(); }
-async function createBook() { const n=await Dialog.prompt('新词库名：'); if(!n||!n.trim())return; const id='b_'+Date.now(); books.push({id: id, name:n.trim()}); saveBooks(); switchBook(id); }
+async function createBook() { const n=await Dialog.prompt('请为新建词库命名：'); if(!n||!n.trim())return; const id='b_'+Date.now(); books.push({id: id, name:n.trim()}); saveBooks(); switchBook(id); }
 async function renameBook() { 
     let cb = null; for(let i=0; i<books.length; i++) { if(books[i].id === currentBookId) cb = books[i]; }
     if(!cb) return; 
-    const n=await Dialog.prompt('改名：',cb.name); 
+    const n=await Dialog.prompt('修改本词库名字：',cb.name); 
     if(n&&n.trim()){ cb.name=n.trim(); saveBooks(); renderBookTabs(); } 
 }
 async function deleteBook() { 
-    if(books.length <= 1){ await Dialog.alert('至少保留1个系统词库哦'); return; } 
-    if(currentBookId === 'default') { await Dialog.alert('这个默认库不可删！'); return; } 
-    if(!(await Dialog.confirm('⚠️ 警告：删除该库会清空里面所有的单词？'))) return; 
+    if(books.length <= 1){ await Dialog.alert('系统规定至少保留1个核心词库哦。'); return; } 
+    if(currentBookId === 'default') { await Dialog.alert('默认综合词库是系统锁定的，不可删除！'); return; } 
+    if(!(await Dialog.confirm('⚠️ 极度危险：你确定要删除这个词库吗？里面所有的单词都会被直接销毁！'))) return; 
     
     USERS.forEach(function(u) { 
         const ws = localStorage.getItem(wKey(u.uid)); 
@@ -549,12 +628,18 @@ async function deleteBook() {
 }
 
 function petTap() { 
-    const st = getPetStage(); const msgs = ['哎呀，别戳我！', '金币能让小怪兽长大！', '快去买零食喂我！']; 
+    const st = getPetStage(); const msgs = ['哎呀，别戳我啦！', '多复习单词，赚金币买口粮！', '右边商店里有好吃的！']; 
     if(player.ownsCrown) msgs.push('膜拜土豪理财大师💰'); 
     if(st.level >= 4) msgs.push('大鲨鱼饿啦！🦈'); 
     const el = document.createElement('div'); el.textContent = msgs[Math.floor(Math.random() * msgs.length)]; 
-    el.style.cssText = 'position:fixed; top:20%; left:50%; transform:translateX(-50%); background:white; color:#333; font-weight:bold; padding:10px 20px; border-radius:16px; box-shadow:0 10px 20px rgba(0,0,0,0.1); z-index:9999; animation:flyup 1.8s forwards; font-size:0.9rem; pointer-events:none;'; 
-    document.body.appendChild(el); setTimeout(function() { el.remove(); }, 1800); 
+    el.style.cssText = 'position:fixed; top:20%; left:50%; transform:translate(-50%, 0); background:rgba(0,0,0,0.8); color:white; font-weight:bold; padding:10px 20px; border-radius:16px; box-shadow:0 10px 20px rgba(0,0,0,0.1); z-index:9999; animation:flyText 2s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275); font-size:0.9rem; pointer-events:none; white-space:nowrap;'; 
+    document.body.appendChild(el); 
+    
+    let keyFrames = document.createElement('style');
+    keyFrames.innerHTML = `@keyframes flyText { 0% { opacity:0; transform:translate(-50%, 20px) scale(0.8); } 20% { opacity:1; transform:translate(-50%, 0) scale(1.1); } 30% { transform:translate(-50%, 0) scale(1); } 80% { opacity:1; transform:translate(-50%, -10px); } 100% { opacity:0; transform:translate(-50%, -40px) scale(0.9); } }`;
+    document.head.appendChild(keyFrames);
+
+    setTimeout(function() { el.remove(); keyFrames.remove(); }, 2000); 
 }
 
 function init() { 
@@ -563,7 +648,6 @@ function init() {
         document.getElementById('accentBtn').textContent = ttsAccent===2 ? 'US' : 'UK'; 
         queue = buildQueue(); qi = 0; showCard(); renderStats(); 
     } catch(err) {
-        // 如果 init 阶段依然崩溃，强制调用报错仪！
         window.onerror("Init 致命启动错误: " + err.message, "app.js", 0);
     }
 }
