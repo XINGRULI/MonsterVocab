@@ -249,12 +249,94 @@ async function buyItem(id) {
 }
 
 /* ═══════════════════════════════════════════════
-   6. 🔊 你的原版机器发音引擎 (有道)
+   6. 🔊 智能双发音引擎 (原生优选 + 有道智能短句兜底)
    ═══════════════════════════════════════════════ */
 function getPhonics(en) { return ''; } 
-async function autoSpeakEn(text) { return new Promise(function(r) { const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=${ttsAccent}`; try { const a = new Audio(url); a.onended=r; a.onerror=r; a.play().catch(r); } catch(err) { r(); } setTimeout(r, 1500); }); }
-async function autoSpeakZh(text) { return new Promise(function(r) { const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=zh`; try { const a = new Audio(url); a.onended=r; a.onerror=r; a.play().catch(r); } catch(err) { r(); } setTimeout(r, 1500); }); }
-async function speak(e) { e.stopPropagation(); if (qi >= queue.length) return; const w = words[queue[qi]]; if(player.quizMode === 'zh2en') { if(!shown) await autoSpeakZh(w.chinese); else await autoSpeakEn(w.english); } else { if(!shown) await autoSpeakEn(w.english); else await autoSpeakZh(w.chinese); } }
+
+async function autoSpeakEn(text) { return playSpeech(text, ttsAccent === 1 ? 'en-GB' : 'en-US'); }
+async function autoSpeakZh(text) { return playSpeech(text, 'zh-CN'); }
+
+// 核心强力双发音分发器
+async function playSpeech(text, lang) {
+    return new Promise(function(resolve) {
+        // 【第一道防线：尝试调用操作系统的高级真人发音】
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // 必须先打断上一次的，防止卡死队列
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = lang;
+            msg.rate = 0.85; // 稍微放慢语速，适合小孩子听清
+            
+            // 智能挑选顶级声音 (如果系统里有的话)
+            const voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                let bestVoice = null;
+                for(let i=0; i<voices.length; i++) {
+                    let v = voices[i];
+                    if(v.lang.indexOf(lang.split('-')[0]) !== -1) {
+                        // 优先寻找微软晓晓、苹果Ting-Ting等高质女声
+                        if(v.name.indexOf('Xiaoxiao')!==-1 || v.name.indexOf('Ting-Ting')!==-1 || v.name.indexOf('Tingting')!==-1) {
+                            bestVoice = v; break;
+                        }
+                    }
+                }
+                if(bestVoice) msg.voice = bestVoice;
+            }
+
+            // 【黑科技：安卓被墙防卡死定时器】
+            let fallbackTriggered = false;
+            const timer = setTimeout(function() {
+                // 如果 800 毫秒了设备还没出声，说明遇到了安卓原生 Chrome 被墙的死胡同
+                fallbackTriggered = true;
+                window.speechSynthesis.cancel();
+                playYoudao(text, lang).then(resolve); // 立刻切换到有道保命
+            }, 800);
+
+            msg.onstart = function() { clearTimeout(timer); }; // 如果成功出声，取消倒计时
+            msg.onend = function() { if(!fallbackTriggered) resolve(); };
+            msg.onerror = function() { 
+                if(!fallbackTriggered) { clearTimeout(timer); fallbackTriggered = true; playYoudao(text, lang).then(resolve); }
+            };
+
+            window.speechSynthesis.speak(msg);
+        } else {
+            // 连接口都不支持的超老设备，直接调有道
+            playYoudao(text, lang).then(resolve);
+        }
+    });
+}
+
+// 【第二道防线：有道网络发音兜底 (带长句修复)】
+function playYoudao(text, lang) {
+    return new Promise(function(resolve) {
+        // 关键修复：把所有句子里的标点符号抠掉，变成空格！防止有道 API 遇到问号直接崩溃不理人
+        const cleanText = text.replace(/[.,!?，。！？]/g, ' '); 
+        let url = '';
+        if (lang === 'zh-CN') {
+            url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(cleanText)}&le=zh`;
+        } else {
+            const type = ttsAccent === 1 ? 1 : 2;
+            url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(cleanText)}&type=${type}`;
+        }
+        try { 
+            const a = new Audio(url); 
+            a.onended = resolve; 
+            a.onerror = resolve; 
+            a.play().catch(resolve); 
+        } catch(err) { resolve(); }
+        setTimeout(resolve, 2000); // 终极超时锁，最长等 2 秒，绝不卡死网页
+    });
+}
+
+async function speak(e) { 
+    e.stopPropagation(); 
+    if (qi >= queue.length) return; 
+    const w = words[queue[qi]]; 
+    if(player.quizMode === 'zh2en') { 
+        if(!shown) await autoSpeakZh(w.chinese); else await autoSpeakEn(w.english); 
+    } else { 
+        if(!shown) await autoSpeakEn(w.english); else await autoSpeakZh(w.chinese); 
+    } 
+}
 
 /* ═══════════════════════════════════════════════
    7. 🎨 视图渲染主控
