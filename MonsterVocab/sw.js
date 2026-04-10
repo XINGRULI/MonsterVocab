@@ -1,27 +1,27 @@
-const CACHE_NAME = 'monster-vocab-v1';
-// 需要离线缓存的资源列表
+const CACHE_NAME = 'monster-vocab-v2';
+// ⚠️ 这里的列表，绝不能出现不存在的文件，否则整个 PWA 会安装失败！
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './css/style.css',
   './js/app.js',
   './manifest.json',
-  './icon.png',
-  'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js',
-  'https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap'
+  './icon-192.png',
+  './icon-512.png',
+  'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js'
 ];
 
-// 安装阶段：预缓存所有静态资源
+// 安装阶段
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
+      // 如果报错，通常是因为上面的 ASSETS_TO_CACHE 有路径写错了
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
   self.skipWaiting();
 });
 
-// 激活阶段：清理旧版本缓存
+// 激活阶段
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -35,9 +35,8 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 拦截网络请求：离线优先策略 (Cache First, fallback to Network)
+// 拦截请求（如果是向有道请求发音，直接跳过并联网）
 self.addEventListener('fetch', (event) => {
-  // 对于 TTS 语音等外部音频请求，直接放行不缓存
   if (event.request.url.includes('dictvoice') || event.request.url.includes('openspeech')) {
     return;
   }

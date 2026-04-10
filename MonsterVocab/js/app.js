@@ -6,17 +6,16 @@ window.onerror = function(message, source, lineno, colno, error) {
     errDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; padding:15px; background-color:#ef4444; color:white; font-size:12px; z-index:99999; word-break:break-all; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.3);';
     errDiv.innerHTML = `⚠️ <b>系统崩溃拦截：</b><br>${message}<br>请截图反馈！(行: ${lineno})`;
     document.body.appendChild(errDiv);
-    // 强行清理一次可能导致崩溃的缓存
     localStorage.removeItem('mw_mic');
 };
 
 /* ═══════════════════════════════════════════════
-   1. 🧨 PWA 缓存粉碎机 (强行注销旧版保安)
+   1. 🌟 修改点 1：恢复 PWA 注册，允许安卓手机正常安装 App 和图标！
    ═══════════════════════════════════════════════ */
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let i = 0; i < registrations.length; i++) { registrations[i].unregister(); }
-    }).catch(function(e){ console.log(e); });
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js').catch(function(e){ console.log(e); });
+    });
 }
 
 /* ═══════════════════════════════════════════════
@@ -77,9 +76,8 @@ async function fetchWikiImage(word) {
 }
 
 /* ═══════════════════════════════════════════════
-   4. 核心系统与储存引擎 (全面移除 ?. 可选链语法)
+   4. 核心系统与储存引擎
    ═══════════════════════════════════════════════ */
-// 安全的数据解析
 function safeParseJSON(str, fallback) {
     if (!str) return fallback;
     try { return JSON.parse(str); } catch (e) { return fallback; }
@@ -113,7 +111,6 @@ const saveBooks = function() { localStorage.setItem('mw_books', JSON.stringify(b
 
 function loadBooks() { 
     books = safeParseJSON(localStorage.getItem('mw_books'), []);
-    // 现在不再强制锁死 'default' 了，只判断如果所有词库都被删光了，才补一个保底的
     if (books.length === 0) {
         books.push({id:'default', name:'综合词库'});
     }
@@ -220,7 +217,6 @@ function openShop() {
 function closeShop() { document.getElementById('shopOv').classList.remove('open'); }
 
 async function buyItem(id) { 
-    // 下面不再使用高级箭头函数查找，改为基础循环寻找确保老平板不崩溃
     let item = null;
     for(let i=0; i<SHOP_ITEMS.length; i++) { if(SHOP_ITEMS[i].id === id) item = SHOP_ITEMS[i]; }
     if(!item || player.coins < item.price) return; 
@@ -253,7 +249,7 @@ async function buyItem(id) {
 }
 
 /* ═══════════════════════════════════════════════
-   6. 🔊 纯净原生发音引擎
+   6. 🔊 你的原版机器发音引擎 (有道)
    ═══════════════════════════════════════════════ */
 function getPhonics(en) { return ''; } 
 async function autoSpeakEn(text) { return new Promise(function(r) { const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=${ttsAccent}`; try { const a = new Audio(url); a.onended=r; a.onerror=r; a.play().catch(r); } catch(err) { r(); } setTimeout(r, 1500); }); }
@@ -261,7 +257,7 @@ async function autoSpeakZh(text) { return new Promise(function(r) { const url = 
 async function speak(e) { e.stopPropagation(); if (qi >= queue.length) return; const w = words[queue[qi]]; if(player.quizMode === 'zh2en') { if(!shown) await autoSpeakZh(w.chinese); else await autoSpeakEn(w.english); } else { if(!shown) await autoSpeakEn(w.english); else await autoSpeakZh(w.chinese); } }
 
 /* ═══════════════════════════════════════════════
-   7. 🎨 视图渲染主控：完全去除废弃权限逻辑
+   7. 🎨 视图渲染主控
    ═══════════════════════════════════════════════ */
 function renderPet() { 
     const st = getPetStage(); document.getElementById('petIco').textContent = st.ico; 
@@ -529,9 +525,10 @@ async function renameBook() {
     const n=await Dialog.prompt('改名：',cb.name); 
     if(n&&n.trim()){ cb.name=n.trim(); saveBooks(); renderBookTabs(); } 
 }
+
+/* 🌟 修改点 2：这里挂载了你想要的三重防误触密码锁删库 */
 async function deleteBook() { 
     if(books.length <= 1){ await Dialog.alert('哪怕是换词库，系统也规定至少得保留1个哦（请新建一个再来删这个）。'); return; } 
-    // 【以前这里有一行专门拦截 default 的防护墙，现在已经被我拆了！】
     
     let cb = null; 
     for(let i=0; i<books.length; i++) { if(books[i].id === currentBookId) cb = books[i]; }
@@ -567,6 +564,7 @@ async function deleteBook() {
     saveBooks(); currentBookId = books[0].id; localStorage.setItem('mw_cbook_', currentBookId); 
     queue = buildQueue(); qi = 0; renderBookTabs(); refreshList(); renderStats(); showCard(); 
 }
+
 function petTap() { 
     const st = getPetStage(); const msgs = ['哎呀，别戳我！', '金币能让小怪兽长大！', '快去买零食喂我！']; 
     if(player.ownsCrown) msgs.push('膜拜土豪理财大师💰'); 
@@ -582,7 +580,6 @@ function init() {
         document.getElementById('accentBtn').textContent = ttsAccent===2 ? 'US' : 'UK'; 
         queue = buildQueue(); qi = 0; showCard(); renderStats(); 
     } catch(err) {
-        // 如果 init 阶段依然崩溃，强制调用报错仪！
         window.onerror("Init 致命启动错误: " + err.message, "app.js", 0);
     }
 }
