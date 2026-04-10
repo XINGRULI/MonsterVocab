@@ -1,219 +1,117 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>毛毛单词小怪兽</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#f1f5f9">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
-    body{font-family:'Nunito',system-ui,sans-serif; background:#f8fafc; overflow:hidden; touch-action:none; -webkit-tap-highlight-color:transparent;}
-    
-    .c{perspective:1500px; height:60vh; max-height:500px;}
-    .ci{width:100%; height:100%; position:relative; background:#fff; border-radius:32px; box-shadow:0 10px 30px rgba(0,0,0,0.08), inset 0 -5px 0 rgba(0,0,0,0.02); display:flex; flex-direction:column; align-items:center; justify-content:center; transform-origin:center 120%; transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);}
-    .cin{animation:pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;}
-    @keyframes pop{ 0%{transform:scale(0.8) translateY(20px); opacity:0;} 100%{transform:scale(1) translateY(0); opacity:1;} }
-    
-    .acts button{flex:1; padding:18px 0; border-radius:20px; font-weight:900; font-size:1.1rem; color:#fff; transition:transform 0.1s; box-shadow:0 4px 15px rgba(0,0,0,0.15);}
-    .acts button:active{transform:scale(0.92);}
-    
-    .dot{width:10px; height:10px; border-radius:5px; background:#e2e8f0; transition:all 0.3s;}
-    .dot.cur{background:#6366f1; transform:scale(1.4); border-radius:8px;}
-    .dot.done{background:#10b981;}
-    
-    .ov, .sv{position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:50; display:flex; flex-direction:column; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);}
-    .ov.open, .sv.open{transform:translateY(0);}
-    
-    .wi{display:flex; align-items:center; padding:10px 0; border-bottom:1px solid #f1f5f9; font-weight:700;}
-    .we{width:40px; font-size:1.5rem;} .wn{flex:1;} .wz{flex:1; color:#64748b;} .ws{width:30px; font-size:0.8rem;}
-    .wd{color:#ef4444; padding:5px 10px;}
-    .we-btn{color:#3b82f6; padding:5px 10px; background:#eff6ff; border-radius:8px; margin-right:5px;}
-    
-    .top-bar{background:linear-gradient(to bottom, #fff 0%, rgba(255,255,255,0.9) 100%); box-shadow:0 2px 10px rgba(0,0,0,0.03);}
-    .btm-bar{background:linear-gradient(to top, #fff 0%, rgba(255,255,255,0.9) 100%); box-shadow:0 -2px 10px rgba(0,0,0,0.03);}
-    
-    .lut-ov{position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:100; display:none; justify-content:center; align-items:center;}
-    .lut-ov.show{display:flex; animation:fadeIn 0.3s forwards;}
-    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-    .lut-box{background:#fff; padding:30px; border-radius:24px; text-align:center; transform:scale(0.8); animation:boxPop 0.5s cubic-bezier(0.175,0.885,0.32,1.275) forwards;}
-    @keyframes boxPop{to{transform:scale(1);}}
-    
-    .shop-item{display:flex; justify-content:space-between; align-items:center; padding:15px; border-radius:16px; background:#f8fafc; margin-bottom:10px;}
-    .buy-btn{background:#10b981; color:#fff; font-weight:900; padding:8px 16px; border-radius:12px; box-shadow:0 4px 10px rgba(16,185,129,0.3);}
-    .buy-btn:active{transform:scale(0.95);}
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#c8b6ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="./icon.png">
+<link rel="manifest" href="./manifest.json">
+<title>小怪兽背单词 🐉</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="./css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 </head>
-<body class="h-screen w-full flex flex-col relative text-slate-800">
+<body class="antialiased">
+<div id="pts"></div>
 
-  <!-- 顶部状态栏 -->
-  <div class="top-bar flex justify-between items-center p-4 z-10 relative">
-    <div class="flex items-center gap-3">
-        <div id="gearBtn" onclick="openGear()" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-xl shadow-sm active:scale-90 transition">⚙️</div>
-        <span id="userBadge" class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg font-bold text-sm">👦</span>
-    </div>
-    
-    <div class="flex gap-2">
-        <div onclick="toggleAccent()" id="accentBtn" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-black text-sm active:scale-95 shadow-sm flex items-center justify-center">US</div>
-        <div id="shopBtn" onclick="openShop()" class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-black flex items-center gap-1 active:scale-95 shadow-sm">
-            <span>🛒</span><span id="coinAmo">0</span>
-        </div>
+<!-- 顶部状态栏 (修复手机挤压问题) -->
+<div class="bar max-w-2xl mx-auto md:mt-4 flex flex-wrap gap-y-3 justify-between items-center px-4 py-3">
+  <div class="bar-left flex-shrink-0">
+    <span class="pet" id="petIco">🥚</span>
+    <div class="meta">
+      <div class="meta-name" id="petName">小蛋蛋 Lv.1</div>
+      <div class="exp-wrap"><div class="exp-bar" id="expBar" style="width:0%"></div></div>
+      <div class="exp-txt" id="expTxt">0 / 100 EXP</div>
     </div>
   </div>
-
-  <!-- 中央主区域 -->
-  <div class="flex-1 flex flex-col px-5 relative h-full"> 
-    
-    <div class="c w-full max-w-md mx-auto mt-4" id="card" onclick="cardTap()">
-      <div class="ci">
-        <div class="absolute top-4 right-4 bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold text-xs" id="lvBadge">Lv.0</div>
-        <div id="sndBtn" onclick="speak(event)" class="absolute top-4 left-4 w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl shadow active:scale-90 transition hidden z-20">🔊</div>
-        
-        <div id="wEmo" class="mb-4 drop-shadow-md">📝</div>
-        <div id="wEn" class="text-4xl font-black text-slate-800 mb-1">Apple</div>
-        <div id="wPh" class="text-sm font-bold text-slate-400 mb-4 tracking-widest font-mono"></div>
-        <div id="wZh" class="text-2xl font-bold text-slate-600 tracking-wide">苹果</div>
-        
-        <div id="hint" class="absolute bottom-5 text-center w-full transition-opacity duration-300"></div>
-      </div>
-    </div>
-
-    <div class="acts hidden flex gap-4 w-full max-w-md mx-auto mt-8 px-2" id="acts">
-      <button onclick="act('fuzzy'); event.stopPropagation();" class="bg-rose-400">没记住</button>
-      <button onclick="act('know'); event.stopPropagation();" class="bg-emerald-400 relative overflow-hidden group">
-        <span>记住了</span>
-        <div class="absolute inset-0 bg-white/20 transform skew-x-12 -translate-x-full group-hover:animate-[shimmer_1s_infinite]"></div>
-      </button>
-      <button onclick="act('master'); event.stopPropagation();" class="bg-indigo-500 w-12 flex-none rotate-3">直接<br>斩杀</button>
-    </div>
-
-    <div id="dots" class="flex justify-center gap-2 mt-6 mb-6"></div>
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <button class="accent-btn text-xs md:text-sm" id="accentBtn" onclick="toggleAccent()" title="切换发音">🇺🇸 美式</button>
+    <span class="user-badge text-xs md:text-sm" id="userBadge">👦 宝宝1</span>
+    <button class="gear text-2xl" onclick="openGear()" title="家长模式">⚙️</button>
   </div>
+</div>
 
-  <!-- 底部宠物饲养区 -->
-  <div class="btm-bar p-4 pb-6 z-10 relative active:bg-slate-50 transition" id="petArea" onclick="petTap()">
-    <div class="max-w-md mx-auto flex items-center gap-4">
-      <div id="petIco" class="text-5xl drop-shadow-lg relative">
-         <span id="petCrown" class="absolute -top-4 -right-2 text-2xl rotate-12 hidden">👑</span>
-      </div>
-      <div class="flex-1">
-        <div class="flex justify-between items-end mb-1">
-          <div id="petName" class="font-black text-slate-700">魔法神蛋</div>
-          <div id="fullnessTxt" class="text-xs font-bold text-slate-400">0/300</div>
-        </div>
-        <div class="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner relative">
-          <div id="fullnessBar" class="h-full bg-emerald-400 rounded-full transition-all duration-500 w-0"></div>
-        </div>
-        <div class="flex justify-between text-xs text-slate-400 mt-2 font-bold px-1">
-          <div><span class="text-indigo-400">🎯新词</span> <span id="sTodo">0</span></div>
-          <div><span class="text-emerald-500">🏆已斩</span> <span id="sMast">0</span></div>
-          <div><span class="text-amber-500">📈本库</span> <span id="sTotal">0</span></div>
-        </div>
-      </div>
-    </div>
+<!-- 数据统计 -->
+<div class="stats max-w-2xl mx-auto">
+  <div class="chip"><div class="chip-n" id="sTodo">0</div><div class="chip-l">今日剩余</div></div>
+  <div class="chip"><div class="chip-n" id="sTotal">0</div><div class="chip-l">本册单词</div></div>
+  <div class="chip"><div class="chip-n" id="sMast">0</div><div class="chip-l">已掌握</div></div>
+</div>
+<div class="max-w-2xl mx-auto relative z-10 bg-white/65 backdrop-blur-md border border-white/90 rounded-2xl py-2 px-4 shadow-sm text-sm font-bold text-purple-700 w-full text-center">
+  📖 当前词库：<span id="curBookLabel">默认词库</span>
+</div>
+
+<!-- 主卡片 -->
+<div class="card-wrap max-w-2xl mx-auto flex-grow flex flex-col justify-center">
+  <div class="card md:min-h-[400px]" id="card" onclick="cardTap()">
+    <div class="lv-badge" id="lvBadge">Lv.0</div>
+    <button class="snd-btn" id="sndBtn" onclick="speak(event)">🔊</button>
+    <button class="prev-btn" id="prevBtn" onclick="prevWord(event)">←</button>
+    <span class="w-emoji md:text-[7rem]" id="wEmo">📚</span>
+    <div class="w-en md:text-6xl" id="wEn">准备中…</div>
+    <div class="w-ph md:text-2xl" id="wPh"></div>
+    <div class="w-zh off md:text-3xl" id="wZh">—</div>
+    <div class="hint" id="hint">👆 点击卡片显示图片和中文</div>
+    <div class="dots" id="dots"></div>
   </div>
+</div>
 
-  <!-- ⚙️ 家长控制浮层 -->
-  <div id="ov" class="ov pt-10 px-4 pb-0" onclick="if(event.target.id==='ov') closeOv()">
-    <div class="bg-white h-full rounded-t-[32px] p-6 shadow-2xl overflow-y-auto w-full max-w-lg mx-auto flex flex-col">
-       <div class="flex justify-between items-center mb-6 border-b pb-4">
-          <h2 class="text-2xl font-black text-slate-800">⚙️ 家长后勤中心</h2>
-          <div onclick="closeOv()" class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold active:scale-90">✕</div>
-       </div>
-       
-       <div class="text-sm font-bold text-slate-400 mb-3 ml-1 uppercase tracking-widest">USERS & PLAN</div>
-       <div id="userCards" class="flex flex-col gap-3 mb-6 bg-slate-50 p-3 rounded-2xl border border-slate-100"></div>
+<!-- 操作按钮 -->
+<div class="acts max-w-2xl mx-auto mb-6" id="acts">
+  <button class="a forgot" onclick="act('forgot')"><span class="ic">✕</span><span class="lb">忘了</span></button>
+  <button class="a fuzzy"  onclick="act('fuzzy')"><span class="ic">?</span><span class="lb">模糊</span></button>
+  <button class="a know"   onclick="act('know')"><span class="ic">✓</span><span class="lb">认识</span></button>
+  <button class="a master" onclick="act('master')"><span class="ic">⭐</span><span class="lb">掌握</span></button>
+</div>
 
-       <div class="text-sm font-bold text-slate-400 mb-3 ml-1 flex justify-between uppercase tracking-widest mt-2">
-         <span>BOOK LIBRARY</span>
-         <span id="wcntBook" class="text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded"></span>
-       </div>
-       <div id="bookTabs" class="flex flex-wrap gap-2 mb-4 bg-slate-50 p-3 rounded-2xl border border-slate-100"></div>
-       <div class="flex gap-2 mb-6">
-         <button onclick="createBook()" class="flex-1 bg-indigo-100 text-indigo-700 font-bold py-2 rounded-xl text-sm shadow-sm active:scale-95">➕ 建新词库</button>
-         <button onclick="renameBook()" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2 rounded-xl text-sm shadow-sm active:scale-95">✎ 改名</button>
-         <button onclick="deleteBook()" class="flex-1 bg-rose-100 text-rose-700 font-bold py-2 rounded-xl text-sm shadow-sm active:scale-95">🗑️ 删库</button>
-       </div>
-       
-       <div class="flex flex-col gap-3 mb-6 bg-blue-50 p-4 rounded-2xl border border-blue-100 relative overflow-hidden">
-           <div class="absolute -right-4 -top-4 text-6xl opacity-20">☁️</div>
-           <div class="font-bold text-blue-800 mb-1 z-10 flex items-center justify-between">
-               <span>万能导入器 (自动寻找配图)</span>
-               <button onclick="importWords()" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg active:scale-95 shadow font-black shadow-blue-300">↓ 导入</button>
-           </div>
-           <p class="text-xs text-blue-600 mb-2 z-10 font-medium">格式：<b class="bg-blue-100 px-1 rounded">apple, 苹果</b>。一行一个，直接从维基百科扒真图！</p>
-           <textarea id="ta" rows="4" class="w-full bg-white border-2 border-blue-100 rounded-xl p-3 text-sm font-mono focus:outline-none focus:border-blue-400 z-10 shadow-inner" placeholder="dog, 小狗\ncat, 小猫...\n如需强制图可加网址，不加则自动全网搜"></textarea>
-       </div>
-
-       <div class="text-sm font-bold text-slate-400 mb-3 ml-1 flex justify-between uppercase tracking-widest mt-2">
-         <span>Word List (<span id="wcnt">0</span>)</span>
-       </div>
-       <div id="wlist" class="flex-1 overflow-y-auto mb-4 bg-white rounded-2xl border border-slate-200"></div>
+<!-- 家长控制台 -->
+<div class="ov" id="ov" onclick="ovClick(event)">
+  <div class="modal">
+    <div class="m-ttl">👨‍👩‍👧 家长控制台</div>
+    <p style="font-size:.83rem;color:#666;margin-bottom:10px;font-weight:700">👦 用户管理</p>
+    <div id="userCards"></div>
+    <hr class="dvd"/>
+    <p style="font-size:.83rem;color:#666;margin-bottom:8px;font-weight:700">📚 词库管理</p>
+    <div class="btabs" id="bookTabs"></div>
+    <div class="book-acts">
+      <button class="mb pri" onclick="createBook()">➕ 新建</button>
+      <button class="mb sec" onclick="renameBook()">✏️ 重命名</button>
+      <button class="mb red" onclick="deleteBook()">🗑️ 删除</button>
     </div>
+    <hr class="dvd"/>
+    <p class="m-hint">格式：英文,中文（回车换行）<br>例：apple,苹果</p>
+    <textarea class="m-ta" id="ta" placeholder="apple,苹果"></textarea>
+    <div id="mmsg"></div>
+    <button class="mb pri" onclick="importWords()">📥 导入单词</button>
+    <hr class="dvd"/>
+    <p style="font-size:.83rem;color:#666;margin-bottom:8px">📖 <b id="wcntBook">默认</b>（共 <b id="wcnt">0</b> 个）</p>
+    <div class="wl" id="wlist"></div>
+    <button class="mb sec" onclick="closeOv()">关闭</button>
   </div>
+</div>
 
-  <!-- 🛒 杂货铺浮层 -->
-  <div id="shopOv" class="sv pt-20 px-4 pb-0" onclick="if(event.target.id==='shopOv') closeShop()">
-    <div class="bg-white h-full rounded-t-[32px] p-6 shadow-2xl overflow-y-auto w-full max-w-lg mx-auto flex flex-col relative">
-       <div onclick="closeShop()" class="absolute top-6 right-6 w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold active:scale-90 z-20 cursor-pointer">✕</div>
-       <div class="text-center mb-6">
-           <div class="text-6xl mb-2">🛒</div>
-           <h2 class="text-2xl font-black text-slate-800 mt-2">打卡理财杂货铺</h2>
-           <p class="text-slate-500 font-bold mt-1 text-sm bg-slate-100 inline-block px-3 py-1 rounded-full">当前账户余额: <b class="text-amber-500 text-lg" id="shopCoinDisplay">0</b> 💰</p>
-       </div>
-       <div id="shopRenderArea" class="flex-1 overflow-y-auto bg-white"></div>
-    </div>
-  </div>
+<!-- 升级动画弹窗 -->
+<div class="lut" id="lut">
+  <span class="lut-ico" id="lutIco">🐣</span>
+  <div class="lut-ttl" id="lutTtl">宠物进化了！</div>
+  <div class="lut-sub" id="lutSub">继续加油～</div>
+</div>
 
-  <!-- 大奖进化弹窗 -->
-  <div id="lut" class="lut-ov">
-      <div class="lut-box shadow-2xl">
-          <div id="lutIco" class="text-8xl mb-4 drop-shadow-xl animate-bounce"></div>
-          <h2 id="lutTtl" class="text-3xl font-black text-slate-800 mb-2">降临！</h2>
-          <p id="lutSub" class="text-slate-500 font-bold mb-6"></p>
-          <button onclick="document.getElementById('lut').classList.remove('show')" class="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 text-lg">太棒了！</button>
+<!-- 🌟 极简全UI系统弹窗(代替系统自带报错) -->
+<div id="sysModal" class="fixed inset-0 bg-slate-900/40 z-[9999] hidden flex-col items-center justify-center px-4 backdrop-blur-sm transition-opacity">
+  <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform transition-transform" id="sysModalContent">
+      <h3 id="sysModalTitle" class="text-lg font-bold text-slate-800 mb-4 whitespace-pre-wrap leading-relaxed"></h3>
+      <input type="text" id="sysModalInput" class="hidden w-full border-2 border-indigo-100 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:border-indigo-400 font-bold text-slate-700 bg-slate-50">
+      <div class="flex gap-3 mt-4">
+          <button id="sysModalCancel" class="hidden flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold active:scale-95 transition-all text-sm">取消</button>
+          <button id="sysModalConfirm" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold shadow-lg shadow-indigo-200 active:scale-95 transition-all text-sm">确定</button>
       </div>
   </div>
+</div>
 
-  <!-- 统一样式的系统强提醒弹窗 -->
-  <div id="sysModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-    <div id="sysModalContent" class="bg-white w-full max-w-sm rounded-[28px] overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200">
-      <div class="p-6 pb-2">
-        <h3 id="sysModalTitle" class="text-xl font-black text-slate-800 mb-2 leading-snug text-center"></h3>
-        <input type="text" id="sysModalInput" class="w-full mt-4 bg-slate-100 border-2 border-transparent focus:border-indigo-400 focus:bg-white rounded-xl px-4 py-3 text-slate-800 font-bold hidden outline-none transition text-center">
-      </div>
-      <div class="flex gap-0 p-4 pt-4 mt-2 border-t border-slate-50">
-        <button id="sysModalCancel" class="flex-1 py-3 text-slate-400 font-bold hover:bg-slate-50 rounded-xl transition hidden">取消</button>
-        <button id="sysModalConfirm" class="flex-1 py-3 text-indigo-600 font-black hover:bg-indigo-50 rounded-xl transition text-lg">确定 / OK</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
-  
-  <!-- 经典的滑动交互代码 -->
-  <script>
-    let startX = 0, startY = 0;
-    document.body.addEventListener('touchstart', e => { 
-        startX = e.touches[0].clientX; 
-        startY = e.touches[0].clientY; 
-    }, {passive: false});
-    
-    document.body.addEventListener('touchmove', e => { 
-        e.preventDefault(); 
-    }, {passive: false});
-    
-    document.body.addEventListener('touchend', e => {
-      let deltaX = e.changedTouches[0].clientX - startX;
-      let deltaY = e.changedTouches[0].clientY - startY;
-      if (Math.abs(deltaY) < 50) {
-        if (deltaX > 50) { if(window.prevWord) prevWord(e); }
-        else if (deltaX < -50) { if(window.act) act('fuzzy'); }
-      }
-    });
-  </script>
+<script src="js/app.js?v=3.0.1"></script>
 </body>
 </html>
