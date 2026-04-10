@@ -4,7 +4,7 @@
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW 失败', err)); }); }
 
 /* ═══════════════════════════════════════════════
-   2. 视觉进化与 CSS 强制防透视补丁
+   2. 全局弹窗与动态 CSS
    ═══════════════════════════════════════════════ */
 const Dialog = { show(title, type, defaultVal = '') { return new Promise(resolve => { const m = document.getElementById('sysModal'); const c = document.getElementById('sysModalContent'); const t = document.getElementById('sysModalTitle'); const i = document.getElementById('sysModalInput'); const btnCancel = document.getElementById('sysModalCancel'); const btnConfirm = document.getElementById('sysModalConfirm'); t.innerHTML = title; m.classList.remove('hidden'); m.classList.add('flex'); setTimeout(() => { c.classList.remove('scale-95'); c.classList.add('scale-100'); }, 10); i.classList.add('hidden'); btnCancel.classList.add('hidden'); i.value = defaultVal; if(type === 'prompt') { i.classList.remove('hidden'); btnCancel.classList.remove('hidden'); i.focus(); } else if(type === 'confirm') { btnCancel.classList.remove('hidden'); } const cleanup = () => { m.classList.remove('flex'); m.classList.add('hidden'); c.classList.remove('scale-100'); c.classList.add('scale-95'); btnCancel.onclick = null; btnConfirm.onclick = null; }; btnCancel.onclick = () => { cleanup(); resolve(false); }; btnConfirm.onclick = () => { cleanup(); resolve(type === 'prompt' ? i.value : true); }; }); }, alert(title) { return this.show(title, 'alert'); }, confirm(title) { return this.show(title, 'confirm'); }, prompt(title, def) { return this.show(title, 'prompt', def); } };
 
@@ -29,7 +29,7 @@ const EMOJI = { apple:'🍎',banana:'🍌',cat:'🐱',dog:'🐶',elephant:'🐘'
 async function fetchWikiImage(word) { try { const queryWord = encodeURIComponent(word.trim().toLowerCase()); const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${queryWord}&prop=pageimages&format=json&pithumbsize=400&origin=*`); const data = await res.json(); const pages = data.query.pages; const pageId = Object.keys(pages)[0]; if (pageId !== '-1' && pages[pageId].thumbnail) { return pages[pageId].thumbnail.source; } } catch(e) {} return null; }
 
 /* ═══════════════════════════════════════════════
-   4. 全局核心引擎：玩家数据排队机制
+   4. 全局核心引擎
    ═══════════════════════════════════════════════ */
 let ttsAccent = parseInt(localStorage.getItem('mw_accent') || '2'); function toggleAccent() { ttsAccent = ttsAccent === 2 ? 1 : 2; localStorage.setItem('mw_accent', ttsAccent); document.getElementById('accentBtn').textContent = ttsAccent === 2 ? 'US' : 'UK'; }
 const PET_STAGES = [ { level: 1, text: 'Lv.1 魔法神蛋', ico: '🥚', sub: '刚出生，急需营养～', threshold: 0 }, { level: 2, text: 'Lv.2 贪吃小恐龙', ico: '🦖', sub: '破壳啦！解锁商店装备！', threshold: 50 }, { level: 3, text: 'Lv.3 快乐独角兽', ico: '🦄', sub: '神奇魔法觉醒！', threshold: 3000 }, { level: 4, text: 'Lv.4 巡洋大头鲨', ico: '🦈', sub: '大富翁！金币收益翻倍！', threshold: 8000 }, { level: 5, text: 'Lv.5 许愿神龙', ico: '🐉', sub: '巅峰连胜！去找爸妈许愿！', threshold: 25000 } ]; const FULLNESS_CAP = 300; 
@@ -50,7 +50,7 @@ function interval(lvl) { if (lvl === 1) return 12 * 3600000; if (lvl === 2) retu
 function getPetStage() { let cs = PET_STAGES[0]; for(let i = 0; i < PET_STAGES.length; i++) { if(player.totalFed >= PET_STAGES[i].threshold) cs = PET_STAGES[i]; } return cs; }
 function act(action) { if (qi >= queue.length) return; const idx = queue[qi]; const w = words[idx]; const isNewWord = (w.level === 0); const stage = getPetStage(); const coinMult = (stage.level >= 4) ? 2 : 1; if (action === 'know' || action === 'master') { if (isNewWord) player.todayNew = (player.todayNew || 0) + 1; else player.todayRev = (player.todayRev || 0) + 1; if (action === 'know') { w.level = Math.max(1, w.level + 1); w.nextReview = Date.now() + interval(w.level); earnCoins(2 * coinMult); } else { w.level = 5; w.nextReview = Date.now() + 7 * 24 * 3600000; earnCoins(10 * coinMult); } } else { if (action === 'fuzzy') { w.level = Math.max(1, w.level); if(stage.level >= 3) earnCoins(1); } else { w.level = 0; } queue.push(idx); } saveW(); qi++; setTimeout(showCard, 100); }
 function earnCoins(amount) { player.coins += amount; saveP(); renderPet(); const el = document.createElement('div'); el.textContent = `+${amount}💰`; el.style.cssText = 'position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);color:#eab308;font-weight:900;font-size:2rem;text-shadow:0 2px 4px rgba(0,0,0,0.2);z-index:99;animation:flyup 0.8s ease-out forwards;pointer-events:none;'; document.body.appendChild(el); setTimeout(() => el.remove(), 800); }
-async function processDailyCheckIn() { const todayStr = new Date().toDateString(); if (player.lastCheckIn === todayStr) return; const yesterday = new Date(Date.now() - 86400000).toDateString(); if (player.lastCheckIn === yesterday) { player.streak = (player.streak || 0) + 1; } else { player.streak = 1; } player.lastCheckIn = todayStr; let bonus = 10; if(player.streak === 2) bonus = 30; if(player.streak >= 3) bonus = player.ownsCrown ? 80 : 50; player.coins += bonus; saveP(); renderPet(); setTimeout(() => { Dialog.alert(`<span class="text-3xl">🔥</span> 连胜 <b>${player.streak}</b> 天！<br><br>获得：<b class="text-yellow-600">+${bonus} 金币</b>！<br><span class="text-xs text-slate-500">${player.ownsCrown ? '👑 皇家理财生效' : ''}</span>`); }, 1500); }
+async function processDailyCheckIn() { const todayStr = new Date().toDateString(); if (player.lastCheckIn === todayStr) return; const yesterday = new Date(Date.now() - 86400000).toDateString(); if (player.lastCheckIn === yesterday) { player.streak = (player.streak || 0) + 1; } else { player.streak = 1; } player.lastCheckIn = todayStr; let bonus = 10; if(player.streak === 2) bonus = 30; if(player.streak >= 3) bonus = player.ownsCrown ? 80 : 50; player.coins += bonus; saveP(); renderPet(); setTimeout(() => { Dialog.alert(`<span class="text-3xl">🔥</span> 连胜 <b>${player.streak}</b> 天！<br><br>获得：<b class="text-yellow-600">+${bonus} 金币</b>！`); }, 1500); }
 
 const SHOP_ITEMS = [ { id: 'f1', type: 'food', icon: '🍪', name: '怪兽小饼干', desc: '充饥变大', price: 10, val: 20 }, { id: 'f2', type: 'food', icon: '🍎', name: '魔法红苹果', desc: '大量充饥', price: 25, val: 60 }, { id: 'o1', type: 'o2o',  icon: '📺', name: '10 分钟动画片', desc: '兑现实特权', price: 80 }, { id: 'o2', type: 'o2o',  icon: '⭐', name: '1颗家庭积分星', desc: '换实物大奖', price: 100 }, { id: 'c1', type: 'crown',icon: '👑', name: '永久国王皇冠', desc: '全勤暴增神装', price: 800 } ];
 function openShop() { document.getElementById('shopCoinDisplay').textContent = player.coins; const list = document.getElementById('shopRenderArea'); list.innerHTML = ''; SHOP_ITEMS.forEach(it => { if(it.type === 'crown' && player.ownsCrown) return; const canBuy = player.coins >= it.price; const div = document.createElement('div'); div.className = 'shop-item'; div.innerHTML = `<div class="flex items-center gap-3"><div class="text-3xl">${it.icon}</div><div><div class="font-bold text-slate-800">${it.name}</div><div class="text-xs text-slate-500">${it.desc}</div></div></div><button class="buy-btn ${canBuy?'':'opacity-50 cursor-not-allowed'}" ${canBuy ? `onclick="buyItem('${it.id}')"` : 'disabled'}>${it.price} 币</button>`; list.appendChild(div); }); document.getElementById('shopOv').classList.add('open'); }
@@ -66,7 +66,7 @@ async function autoSpeakZh(text) { return new Promise((r) => { const url = `http
 async function speak(e) { e.stopPropagation(); if (qi >= queue.length) return; const w = words[queue[qi]]; if(player.quizMode === 'zh2en') { if(!shown) await autoSpeakZh(w.chinese); else await autoSpeakEn(w.english); } else { if(!shown) await autoSpeakEn(w.english); else await autoSpeakZh(w.chinese); } }
 
 /* ═══════════════════════════════════════════════
-   7. 🎤 完美手控版对讲机 (加入【火眼金睛】双重诊断)
+   7. 🎤 完美手控版对讲机 (解决回覆盖与消音断流Bug)
    ═══════════════════════════════════════════════ */
 let isMicEnabled = localStorage.getItem('mw_mic') !== '0'; 
 let recognition = null; 
@@ -83,50 +83,39 @@ function renderMicBtnToggle() {
     btn.style.borderColor = isMicEnabled ? '#10b981' : '#e2e8f0'; btn.style.color = isMicEnabled ? '#10b981' : '#94a3b8';
 }
 
-async function manualStartListening(e, wordInfo) {
+function manualStartListening(e, wordInfo) {
     e.stopPropagation();
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { Dialog.alert('浏览器不支持，请换用 Chrome'); return; }
     if (recognition) { recognition.abort(); }
+    
+    // 强行关掉还没放完的喇叭声音，防止自己听到自己的回音
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     
-    let btn = document.getElementById('bigMicBtn');
-    let hintEl = document.getElementById('hintInfo');
-
-    // 🌟 终极侦测步骤 1：先用原生 API 硬抢麦克风 🌟
-    // 此举将百分百逼出浏览器的那个带有“允许”按钮的弹窗，强行突破手机限制！
-    try {
-        if(hintEl) hintEl.innerHTML = '<span class="text-amber-500">正在唤起麦克风权限...</span>';
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // 拿到权限后咱们立刻把它关了，我们只是用它来“破冰”和验证硬件的
-        stream.getTracks().forEach(track => track.stop()); 
-    } catch (err) {
-        console.error("麦克风破冰失败:", err);
-        if(hintEl) hintEl.innerHTML = '<b class="text-rose-600">❌ 您拒绝了权限，或被悬浮窗拦截。<br>请点击网址旁边的【🔒锁图标】允许麦克风！</b>';
-        return; // 查出病因，游戏结束
-    }
-
-    // 🌟 终极侦测步骤 2：硬件无误，启动 Google Web Speech API 🌟
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRec(); 
-    recognition.continuous = false; // 安卓稳定模式
+    recognition.continuous = false; // 保证安卓绝不崩溃断流
     recognition.interimResults = true; 
     
     const expectLang = player.quizMode === 'zh2en' ? 'en-US' : 'zh-CN'; 
     recognition.lang = expectLang;
     
-    if(btn) btn.classList.add('listening');
-    if(hintEl) hintEl.innerHTML = '<span class="text-emerald-700">权限通过，请大声说话...</span>';
+    let btn = document.getElementById('bigMicBtn'); if(btn) btn.classList.add('listening');
+    let hintEl = document.getElementById('hintInfo'); if(hintEl) hintEl.innerHTML = '<span class="text-emerald-700">正在听，请大胆说话...</span>';
 
+    // 🌟 全新引入的状态锁体系 🌟
     let hasAnsweredCorrectly = false; 
+    let hasAnsweredWrong = false; // 用于挡住 onend 的覆盖动作
 
     recognition.onresult = function(event) {
         if(shown || hasAnsweredCorrectly) return; 
         
         let interimTranscript = ''; let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript; else interimTranscript += event.results[i][0].transcript; }
+        for (let i = event.resultIndex; i < event.results.length; ++i) { 
+            if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript; 
+            else interimTranscript += event.results[i][0].transcript; 
+        }
         let rawText = finalTranscript || interimTranscript; if(!rawText) return;
         
-        if(hintEl) hintEl.innerHTML = `<span class="text-emerald-600">听到了: "${rawText}"</span>`;
         let text = rawText.toLowerCase().replace(/[\s.,?!。，？！]/g, ''); let isCorrect = false;
 
         if (expectLang === 'en-US') { let target = wordInfo.english.toLowerCase().replace(/[\s-]/g, ''); if (target && text.includes(target)) isCorrect = true; } 
@@ -145,22 +134,35 @@ async function manualStartListening(e, wordInfo) {
             if(hintEl) hintEl.innerHTML = `<div class="text-emerald-500 font-black text-2xl drop-shadow mt-2">✅ 答对啦！</div>`;
             try { confetti({particleCount:30, spread:50, origin:{y:.6}, zIndex: 99}); } catch(e){}
             setTimeout(() => { if(!shown) act('know'); }, 600); 
+        } else {
+            // 🌟 核心修复：如果是最终结果但答错了，立刻展示并上锁！
+            if (finalTranscript) {
+                hasAnsweredWrong = true;
+                if(hintEl) {
+                    hintEl.innerHTML = `<div class="text-amber-600 bg-amber-50 p-2 rounded-xl"><span class="font-bold">听到了："${rawText}"</span><br><span class="text-xs">发音不太标准哦？再点一次重试！👇</span></div>`;
+                }
+            } else {
+                if(hintEl) hintEl.innerHTML = `<span class="text-emerald-600">正在听: "${rawText}"...</span>`;
+            }
         }
     };
     
     recognition.onend = function() { 
         if(btn) btn.classList.remove('listening'); 
-        if(!hasAnsweredCorrectly && !shown && hintEl) hintEl.innerHTML = '<span class="text-amber-600 font-bold">录音自动停止，可再按一次大图标</span>';
+        // 🌟 核心修复：只在 [没答对] 且 [没答错(没说完)] 的情况下，才提示“周围太安静”自动停止
+        if(!hasAnsweredCorrectly && !hasAnsweredWrong && !shown && hintEl) {
+            hintEl.innerHTML = '<span class="text-amber-600 font-bold bg-amber-50 p-2 rounded-xl block">周围没声音，录音已停止。再戳一次试试！</span>';
+        }
     };
 
-    // 🌟 神级判断：如果报了网络错误，说明是国家防火墙连不上谷歌 🌟
     recognition.onerror = function(event) { 
         if(btn) btn.classList.remove('listening'); 
-        console.log("识别引擎报错：", event.error);
-        if (event.error === 'network' || event.error === 'not-allowed') {
-            if(hintEl) hintEl.innerHTML = '<b class="text-rose-600 block mt-2 bg-rose-50 p-2 rounded">⚠️致命问题：您的手机系统麦克风已就绪，但此安卓手机【无法连接到谷歌语音服务器】。<br>（国产安卓通病，系统底层阉割或被墙拦截，建议电脑端使用）</b>';
+        if (event.error === 'no-speech') {
+            if(hintEl) hintEl.innerHTML = '<span class="text-amber-500 font-bold">哎呀没听见声音！靠近点再点一次！</span>';
+        } else if (event.error === 'network' || event.error === 'not-allowed') {
+            if(hintEl) hintEl.innerHTML = '<b class="text-rose-600 block mt-2 bg-rose-50 p-2 rounded">⚠️致命问题：您的手机系统麦克风已就绪，但此安卓手机【无法连接到谷歌语音服务器】。</b>';
         } else {
-             if(hintEl) hintEl.innerHTML = `<span class="text-rose-500 font-bold">错误: ${event.error}。重试一下？</span>`; 
+             if(hintEl) hintEl.innerHTML = `<span class="text-rose-500 font-bold">错误: ${event.error}</span>`; 
         }
     };
     recognition.start();
@@ -188,7 +190,7 @@ function showCard() {
   
   const hintContainer = document.getElementById('hint');
   if(isMicEnabled) {
-      hintContainer.innerHTML = `<div id="bigMicBtn" class="big-mic-btn shadow-md" title="戳我讲话">🎙️</div><div id="hintInfo" class="text-slate-500 font-bold mt-2 text-sm pt-2">👆 戳麦克风说答案 (或点屏幕翻面)</div>`;
+      hintContainer.innerHTML = `<div id="bigMicBtn" class="big-mic-btn shadow-md" title="戳我讲话">🎙️</div><div id="hintInfo" class="text-slate-500 font-bold mt-2 text-sm pt-2">👆 戳红麦克风说答案 (或点屏幕翻面)</div>`;
       setTimeout(() => { const btn = document.getElementById('bigMicBtn'); if(btn) btn.onclick = (e) => manualStartListening(e, w); }, 50);
   } else { hintContainer.innerHTML = '<span class="text-slate-400 font-bold text-sm">👆 点击卡片翻面背诵</span>'; }
   hintContainer.style.opacity = '1';
