@@ -1,6 +1,3 @@
-/* ═══════════════════════════════════════════════
-   0. 🚨 黑匣子报错系统（拦截一切死机问题）
-   ═══════════════════════════════════════════════ */
 window.onerror = function(message, source, lineno, colno, error) {
     const errDiv = document.createElement('div');
     errDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; padding:15px; background-color:#ef4444; color:white; font-size:12px; z-index:99999; word-break:break-all; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.3);';
@@ -9,18 +6,12 @@ window.onerror = function(message, source, lineno, colno, error) {
     localStorage.removeItem('mw_mic');
 };
 
-/* ═══════════════════════════════════════════════
-   1. 🌟 修改点 1：恢复 PWA 注册，允许安卓手机正常安装 App 和图标！
-   ═══════════════════════════════════════════════ */
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
         navigator.serviceWorker.register('./sw.js').catch(function(e){ console.log(e); });
     });
 }
 
-/* ═══════════════════════════════════════════════
-   2. 全局弹窗与核心 CSS 样式 
-   ═══════════════════════════════════════════════ */
 const Dialog = { 
     show: function(title, type, defaultVal) { 
         if (defaultVal === undefined) defaultVal = '';
@@ -53,9 +44,6 @@ keyf.innerHTML = `
 `;
 document.head.appendChild(keyf);
 
-/* ═══════════════════════════════════════════════
-   3. 维基百科溯源引擎 (向下兼容写法)
-   ═══════════════════════════════════════════════ */
 const EMOJI = { apple:'🍎',banana:'🍌',cat:'🐱',dog:'🐶',elephant:'🐘',fish:'🐟',tiger:'🐅',lion:'🐅',car:'🚗',bus:'🚌' }; 
 function autoEmoji(en) { return EMOJI[en.toLowerCase().trim()] || '📝'; }
 
@@ -75,9 +63,6 @@ async function fetchWikiImage(word) {
     return null; 
 }
 
-/* ═══════════════════════════════════════════════
-   4. 核心系统与储存引擎
-   ═══════════════════════════════════════════════ */
 function safeParseJSON(str, fallback) {
     if (!str) return fallback;
     try { return JSON.parse(str); } catch (e) { return fallback; }
@@ -114,7 +99,6 @@ function loadBooks() {
     if (books.length === 0) { 
         books.push({id:'default', name:'综合词库'}); 
     } 
-    // 👇 新增区：确保永远拥有一个收藏夹 
     if (!books.find(b => b.id === 'b_favorite')) { 
         books.push({id: 'b_favorite', name: '⭐ 收藏夹'}); 
         saveBooks(); 
@@ -169,9 +153,6 @@ function interval(lvl) {
     return 7 * 24 * 3600000; 
 }
 
-/* ═══════════════════════════════════════════════
-   5. 💰 金库、打卡、杂货铺逻辑 
-   ═══════════════════════════════════════════════ */
 function getPetStage() { let cs = PET_STAGES[0]; for(let i = 0; i < PET_STAGES.length; i++) { if(player.totalFed >= PET_STAGES[i].threshold) cs = PET_STAGES[i]; } return cs; }
 
 function act(action) { 
@@ -268,24 +249,20 @@ function getPhonics(en) { return ''; }
 async function autoSpeakEn(text) { return playSpeech(text, ttsAccent === 1 ? 'en-GB' : 'en-US'); }
 async function autoSpeakZh(text) { return playSpeech(text, 'zh-CN'); }
 
-// 核心强力双发音分发器
 async function playSpeech(text, lang) {
     return new Promise(function(resolve) {
-        // 【第一道防线：尝试调用操作系统的高级真人发音】
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // 必须先打断上一次的，防止卡死队列
+            window.speechSynthesis.cancel(); 
             const msg = new SpeechSynthesisUtterance(text);
             msg.lang = lang;
-            msg.rate = 0.85; // 稍微放慢语速，适合小孩子听清
+            msg.rate = 0.85; 
             
-            // 智能挑选顶级声音 (如果系统里有的话)
             const voices = window.speechSynthesis.getVoices();
             if (voices.length > 0) {
                 let bestVoice = null;
                 for(let i=0; i<voices.length; i++) {
                     let v = voices[i];
                     if(v.lang.indexOf(lang.split('-')[0]) !== -1) {
-                        // 优先寻找微软晓晓、苹果Ting-Ting等高质女声
                         if(v.name.indexOf('Xiaoxiao')!==-1 || v.name.indexOf('Ting-Ting')!==-1 || v.name.indexOf('Tingting')!==-1) {
                             bestVoice = v; break;
                         }
@@ -294,16 +271,14 @@ async function playSpeech(text, lang) {
                 if(bestVoice) msg.voice = bestVoice;
             }
 
-            // 【黑科技：安卓被墙防卡死定时器】
             let fallbackTriggered = false;
             const timer = setTimeout(function() {
-                // 如果 800 毫秒了设备还没出声，说明遇到了安卓原生 Chrome 被墙的死胡同
                 fallbackTriggered = true;
                 window.speechSynthesis.cancel();
-                playYoudao(text, lang).then(resolve); // 立刻切换到有道保命
+                playYoudao(text, lang).then(resolve); 
             }, 800);
 
-            msg.onstart = function() { clearTimeout(timer); }; // 如果成功出声，取消倒计时
+            msg.onstart = function() { clearTimeout(timer); }; 
             msg.onend = function() { if(!fallbackTriggered) resolve(); };
             msg.onerror = function() { 
                 if(!fallbackTriggered) { clearTimeout(timer); fallbackTriggered = true; playYoudao(text, lang).then(resolve); }
@@ -311,16 +286,13 @@ async function playSpeech(text, lang) {
 
             window.speechSynthesis.speak(msg);
         } else {
-            // 连接口都不支持的超老设备，直接调有道
             playYoudao(text, lang).then(resolve);
         }
     });
 }
 
-// 【第二道防线：有道网络发音兜底 (带长句修复)】
 function playYoudao(text, lang) {
     return new Promise(function(resolve) {
-        // 关键修复：把所有句子里的标点符号抠掉，变成空格！防止有道 API 遇到问号直接崩溃不理人
         const cleanText = text.replace(/[.,!?，。！？]/g, ' '); 
         let url = '';
         if (lang === 'zh-CN') {
@@ -335,7 +307,7 @@ function playYoudao(text, lang) {
             a.onerror = resolve; 
             a.play().catch(resolve); 
         } catch(err) { resolve(); }
-        setTimeout(resolve, 2000); // 终极超时锁，最长等 2 秒，绝不卡死网页
+        setTimeout(resolve, 2000); 
     });
 }
 
@@ -427,7 +399,7 @@ function showCard() {
   
   renderDots(); 
   renderStats(); 
-  updateFavBtnUI(); // 新增：翻页时会自动判定当前单词是否已被收藏
+  updateFavBtnUI(); 
   const c=document.getElementById('card'); c.classList.remove('cin'); void c.offsetWidth; c.classList.add('cin');
 }
 
@@ -459,7 +431,12 @@ function showDone() {
     document.getElementById('wZh').classList.remove('off'); document.getElementById('hint').style.opacity= '0'; 
     document.getElementById('lvBadge').textContent='✨'; document.getElementById('wEn').style.opacity = '1'; 
     document.getElementById('wEn').style.transform = 'translateY(0)'; document.getElementById('acts').setAttribute('hidden',''); 
-    document.getElementById('sndBtn').style.display='none'; document.getElementById('dots').innerHTML=''; 
+    
+    // 👇 关键修复区：结算时同时把两个按钮都隐藏！！
+    document.getElementById('sndBtn').style.display='none'; 
+    updateFavBtnUI(); // 调用它让它也跟着乖乖藏起来
+
+    document.getElementById('dots').innerHTML=''; 
     renderStats(); const c=document.getElementById('card'); c.classList.remove('cin'); void c.offsetWidth; c.classList.add('cin'); 
     setTimeout(fireworks, 420); processDailyCheckIn(); 
 }
@@ -470,7 +447,7 @@ function fireworks() {
 }
 
 /* ═══════════════════════════════════════════════
-   8. ⚙️ 家长后勤系统 (支持纯净词库管理，无 ?. 语法)
+   8. ⚙️ 家长后勤系统
    ═══════════════════════════════════════════════ */
 function openGear() { renderUserCards(); renderBookTabs(); refreshList(); document.getElementById('ov').classList.add('open'); } 
 function closeOv() { document.getElementById('ov').classList.remove('open'); } 
@@ -622,31 +599,21 @@ async function renameBook() {
     if(n&&n.trim()){ cb.name=n.trim(); saveBooks(); renderBookTabs(); } 
 }
 
-/* 🌟 修改点 2：这里挂载了你想要的三重防误触密码锁删库 */
 async function deleteBook() { 
     if(books.length <= 1){ await Dialog.alert('哪怕是换词库，系统也规定至少得保留1个哦（请新建一个再来删这个）。'); return; } 
     
     let cb = null; 
     for(let i=0; i<books.length; i++) { if(books[i].id === currentBookId) cb = books[i]; }
-    
-    // 第一重锁：常规文字警告
     if(!(await Dialog.confirm('⚠️ 极度危险：确定要删除【' + cb.name + '】吗？\n里面的单词将全部被清理！'))) return; 
-    
-    // 第二重锁：物理互换确认与取消按钮
     const btnContainer = document.getElementById('sysModalConfirm').parentElement;
     btnContainer.style.flexDirection = 'row-reverse'; 
     const step2 = await Dialog.confirm('🚨 再次确认：删除后【绝对无法恢复】！\n(请注意下方按钮位置已互换，确定要删吗？)');
     btnContainer.style.flexDirection = ''; 
     if(!step2) return;
 
-    // 第三重锁：终极手写签发指令
     const t = await Dialog.prompt('🔐 终极安全锁：\n必须一字不差地输入词库名称以执行删除：\n【' + cb.name + '】');
-    if (t !== cb.name) {
-        await Dialog.alert('❌ 输入错误，安全系统已拦截删除操作！'); 
-        return;
-    }
+    if (t !== cb.name) { await Dialog.alert('❌ 输入错误，安全系统已拦截删除操作！'); return; }
     
-    // 三重验证全过，正式执行删除
     USERS.forEach(function(u) { 
         const ws = localStorage.getItem(wKey(u.uid)); 
         if(ws) { 
@@ -681,24 +648,19 @@ function init() {
 }
 
 /* ═══════════════════════════════════════════════
-   🎯 新增：收藏夹核心逻辑引擎
+   🎯 新增：收藏夹核心逻辑引擎 
    ═══════════════════════════════════════════════ */
 
-// 切换收藏状态
 function toggleFavorite(e) {
-    e.stopPropagation(); // 阻止点它的时候卡片也跟着翻转
+    e.stopPropagation(); 
     if (qi >= queue.length) return;
     const curWord = words[queue[qi]];
-    
-    // 检索这个单词是否已经被放进收藏夹了
     const favIdx = words.findIndex(w => w.english.toLowerCase() === curWord.english.toLowerCase() && w.bookId === 'b_favorite');
     
     if (favIdx !== -1) {
-        // 出去
         words.splice(favIdx, 1);
         Dialog.alert('💔 已从收藏夹取消');
     } else {
-        // 进去
         let cloneWord = {
             id: 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2),
             english: curWord.english,
@@ -711,15 +673,9 @@ function toggleFavorite(e) {
         words.push(cloneWord);
         Dialog.alert('⭐ 成功加入收藏夹！<br><span class="text-sm text-slate-500">可以去家长中心切换复习</span>');
     }
-    
-    saveW();         
-    refreshList();   
-    renderBookTabs();
-    renderStats();   
-    updateFavBtnUI();
+    saveW(); refreshList(); renderBookTabs(); renderStats(); updateFavBtnUI();
 }
 
-// 渲染更新卡片上的 UI
 function updateFavBtnUI() {
     const btn = document.getElementById('favBtn');
     if (!btn) return;
