@@ -109,7 +109,17 @@ const saveW = function() { localStorage.setItem(wKey(currentUid), JSON.stringify
 const saveP = function() { localStorage.setItem(pKey(currentUid), JSON.stringify(player)); };
 const saveBooks = function() { localStorage.setItem('mw_books', JSON.stringify(books)); };
 
-function loadBooks() { books = safeParseJSON(localStorage.getItem('mw_books'), []); if (books.length === 0) { books.push({id:'default', name:'综合词库'}); } // 👇 新增区：确保永远拥有一个收藏夹 if (!books.find(b => b.id === 'b_favorite')) { books.push({id: 'b_favorite', name: '⭐ 收藏夹'}); saveBooks(); // 借用你写好的保存函数 } }
+function loadBooks() { 
+    books = safeParseJSON(localStorage.getItem('mw_books'), []); 
+    if (books.length === 0) { 
+        books.push({id:'default', name:'综合词库'}); 
+    } 
+    // 👇 新增区：确保永远拥有一个收藏夹 
+    if (!books.find(b => b.id === 'b_favorite')) { 
+        books.push({id: 'b_favorite', name: '⭐ 收藏夹'}); 
+        saveBooks(); 
+    } 
+}
 
 function loadUser(uid) { 
     currentUid = uid; localStorage.setItem('mw_cur', uid); 
@@ -196,7 +206,13 @@ async function processDailyCheckIn() {
     setTimeout(function() { Dialog.alert(`<span class="text-3xl">🔥</span> 连胜 <b>${player.streak}</b> 天！<br><br>获得：<b class="text-yellow-600">+${bonus} 金币</b>！<br><span class="text-xs text-slate-500">${player.ownsCrown ? '👑 皇家特权生效' : ''}</span>`); }, 1500); 
 }
 
-const SHOP_ITEMS = [ { id: 'f1', type: 'food', icon: '🍪', name: '怪兽小饼干', desc: '充饥变大', price: 10, val: 25 }, // 从20改为25 { id: 'f2', type: 'food', icon: '🍎', name: '魔法红苹果', desc: '大量充饥', price: 20, val: 50 }, // 价格改为20，值改为50，保持极度平衡 { id: 'o1', type: 'o2o', icon: '📺', name: '10 分钟动画片', desc: '兑现实特权', price: 80 }, { id: 'o2', type: 'o2o', icon: '⭐', name: '家庭积分星', desc: '换实物大奖', price: 100 }, { id: 'c1', type: 'crown',icon: '👑', name: '永久国王皇冠', desc: '全勤暴增神装', price: 800 } ];
+const SHOP_ITEMS = [ 
+    { id: 'f1', type: 'food', icon: '🍪', name: '怪兽小饼干', desc: '充饥变大', price: 10, val: 25 }, 
+    { id: 'f2', type: 'food', icon: '🍎', name: '魔法红苹果', desc: '大量充饥', price: 20, val: 50 }, 
+    { id: 'o1', type: 'o2o', icon: '📺', name: '10 分钟动画片', desc: '兑现实特权', price: 80 }, 
+    { id: 'o2', type: 'o2o', icon: '⭐', name: '家庭积分星', desc: '换实物大奖', price: 100 }, 
+    { id: 'c1', type: 'crown',icon: '👑', name: '永久国王皇冠', desc: '全勤暴增神装', price: 800 } 
+];
 
 function openShop() { 
     document.getElementById('shopCoinDisplay').textContent = player.coins; 
@@ -409,7 +425,9 @@ function showCard() {
       autoSpeakEn(w.english);
   }
   
-  renderDots(); renderStats(); updateFavBtnUI(); //
+  renderDots(); 
+  renderStats(); 
+  updateFavBtnUI(); // 新增：翻页时会自动判定当前单词是否已被收藏
   const c=document.getElementById('card'); c.classList.remove('cin'); void c.offsetWidth; c.classList.add('cin');
 }
 
@@ -672,15 +690,15 @@ function toggleFavorite(e) {
     if (qi >= queue.length) return;
     const curWord = words[queue[qi]];
     
-    // 检索这个单词是否已经被放进收藏夹了（匹配英文忽略大小写，并检查词库）
+    // 检索这个单词是否已经被放进收藏夹了
     const favIdx = words.findIndex(w => w.english.toLowerCase() === curWord.english.toLowerCase() && w.bookId === 'b_favorite');
     
     if (favIdx !== -1) {
-        // 如果找到了，就从收藏夹中踢除它
+        // 出去
         words.splice(favIdx, 1);
         Dialog.alert('💔 已从收藏夹取消');
     } else {
-        // 如果没找到，给它发一张专属于收藏夹的“全新克隆身份证”
+        // 进去
         let cloneWord = {
             id: 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2),
             english: curWord.english,
@@ -688,20 +706,20 @@ function toggleFavorite(e) {
             emoji: curWord.emoji,
             level: 0,
             nextReview: Date.now(),
-            bookId: 'b_favorite' // 👉 指向收藏夹的词库ID
+            bookId: 'b_favorite' 
         };
         words.push(cloneWord);
         Dialog.alert('⭐ 成功加入收藏夹！<br><span class="text-sm text-slate-500">可以去家长中心切换复习</span>');
     }
     
-    saveW();         // 存储数据
-    refreshList();   // 更新后台管理列表
-    renderBookTabs();// 更新家长后台的词汇量数字
-    renderStats();   // 刷新前端统计板
-    updateFavBtnUI();// 刷新按钮变色
+    saveW();         
+    refreshList();   
+    renderBookTabs();
+    renderStats();   
+    updateFavBtnUI();
 }
 
-// 渲染更新卡片上的UI
+// 渲染更新卡片上的 UI
 function updateFavBtnUI() {
     const btn = document.getElementById('favBtn');
     if (!btn) return;
@@ -719,4 +737,5 @@ function updateFavBtnUI() {
         btn.className = 'absolute top-[76px] right-4 bg-white/60 backdrop-blur border border-slate-200 px-3 py-1.5 rounded-full text-xs font-bold text-slate-500 shadow-sm transition-all active:scale-95 z-20 flex items-center gap-1';
     }
 }
+
 init();
