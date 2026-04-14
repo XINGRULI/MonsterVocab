@@ -662,6 +662,61 @@ function init() {
     }
 }
 
-/* ═══════════════════════════════════════════════ 🎯 新增：收藏夹核心逻辑引擎 ═══════════════════════════════════════════════ */ // 切换收藏状态 function toggleFavorite(e) { e.stopPropagation(); // 阻止点它的时候卡片也跟着翻转 if (qi >= queue.length) return; const curWord = words[queue[qi]]; // 检索这个单词是否已经被放进收藏夹了（匹配英文忽略大小写，并检查词库） const favIdx = words.findIndex(w => w.english.toLowerCase() === curWord.english.toLowerCase() && w.bookId === 'b_favorite'); if (favIdx !== -1) { // 如果找到了，就从收藏夹中踢除它 words.splice(favIdx, 1); Dialog.alert('💔 已从收藏夹取消'); } else { // 如果没找到，给它发一张专属于收藏夹的“全新克隆身份证” let cloneWord = { id: 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2), english: curWord.english, chinese: curWord.chinese, emoji: curWord.emoji, level: 0, nextReview: Date.now(), bookId: 'b_favorite' // 👉 指向收藏夹的词库ID }; words.push(cloneWord); Dialog.alert('⭐ 成功加入收藏夹！<br><span class="text-sm text-slate-500">可以去家长中心切换复习</span>'); } saveW(); // 存储数据 refreshList(); // 更新后台管理列表 renderBookTabs();// 更新家长后台的词汇量数字 renderStats(); // 刷新前端统计板 updateFavBtnUI();// 刷新按钮变色 } // 渲染更新卡片上的UI function updateFavBtnUI() { const btn = document.getElementById('favBtn'); if (!btn) return; if (qi >= queue.length) { btn.style.display = 'none'; return; } btn.style.display = 'flex'; const curWord = words[queue[qi]]; const isFav = words.some(w => w.english.toLowerCase() === curWord.english.toLowerCase() && w.bookId === 'b_favorite'); if (isFav) { btn.innerHTML = '⭐ 已收藏'; btn.className = 'absolute top-[76px] right-4 bg-amber-50 border border-amber-300 px-3 py-1.5 rounded-full text-xs font-black text-amber-500 shadow-md transition-all active:scale-95 z-20 flex items-center gap-1'; } else { btn.innerHTML = '☆ 收藏'; btn.className = 'absolute top-[76px] right-4 bg-white/60 backdrop-blur border border-slate-200 px-3 py-1.5 rounded-full text-xs font-bold text-slate-500 shadow-sm transition-all active:scale-95 z-20 flex items-center gap-1'; } }
+/* ═══════════════════════════════════════════════
+   🎯 新增：收藏夹核心逻辑引擎
+   ═══════════════════════════════════════════════ */
 
+// 切换收藏状态
+function toggleFavorite(e) {
+    e.stopPropagation(); // 阻止点它的时候卡片也跟着翻转
+    if (qi >= queue.length) return;
+    const curWord = words[queue[qi]];
+    
+    // 检索这个单词是否已经被放进收藏夹了（匹配英文忽略大小写，并检查词库）
+    const favIdx = words.findIndex(w => w.english.toLowerCase() === curWord.english.toLowerCase() && w.bookId === 'b_favorite');
+    
+    if (favIdx !== -1) {
+        // 如果找到了，就从收藏夹中踢除它
+        words.splice(favIdx, 1);
+        Dialog.alert('💔 已从收藏夹取消');
+    } else {
+        // 如果没找到，给它发一张专属于收藏夹的“全新克隆身份证”
+        let cloneWord = {
+            id: 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+            english: curWord.english,
+            chinese: curWord.chinese,
+            emoji: curWord.emoji,
+            level: 0,
+            nextReview: Date.now(),
+            bookId: 'b_favorite' // 👉 指向收藏夹的词库ID
+        };
+        words.push(cloneWord);
+        Dialog.alert('⭐ 成功加入收藏夹！<br><span class="text-sm text-slate-500">可以去家长中心切换复习</span>');
+    }
+    
+    saveW();         // 存储数据
+    refreshList();   // 更新后台管理列表
+    renderBookTabs();// 更新家长后台的词汇量数字
+    renderStats();   // 刷新前端统计板
+    updateFavBtnUI();// 刷新按钮变色
+}
+
+// 渲染更新卡片上的UI
+function updateFavBtnUI() {
+    const btn = document.getElementById('favBtn');
+    if (!btn) return;
+    if (qi >= queue.length) { btn.style.display = 'none'; return; }
+    
+    btn.style.display = 'flex';
+    const curWord = words[queue[qi]];
+    const isFav = words.some(w => w.english.toLowerCase() === curWord.english.toLowerCase() && w.bookId === 'b_favorite');
+    
+    if (isFav) {
+        btn.innerHTML = '⭐ 已收藏';
+        btn.className = 'absolute top-[76px] right-4 bg-amber-50 border border-amber-300 px-3 py-1.5 rounded-full text-xs font-black text-amber-500 shadow-md transition-all active:scale-95 z-20 flex items-center gap-1';
+    } else {
+        btn.innerHTML = '☆ 收藏';
+        btn.className = 'absolute top-[76px] right-4 bg-white/60 backdrop-blur border border-slate-200 px-3 py-1.5 rounded-full text-xs font-bold text-slate-500 shadow-sm transition-all active:scale-95 z-20 flex items-center gap-1';
+    }
+}
 init();
