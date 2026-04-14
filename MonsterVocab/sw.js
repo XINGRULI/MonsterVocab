@@ -1,4 +1,6 @@
-const CACHE_NAME = 'monster-vocab-v2';
+// 👇 关键修改：版本号变为 v3.0！只要这个名字变了，手机和电脑就会强制拉取最新代码
+const CACHE_NAME = 'monster-vocab-v3.0'; 
+
 // ⚠️ 这里的列表，绝不能出现不存在的文件，否则整个 PWA 会安装失败！
 const ASSETS_TO_CACHE = [
   './',
@@ -14,14 +16,13 @@ const ASSETS_TO_CACHE = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // 如果报错，通常是因为上面的 ASSETS_TO_CACHE 有路径写错了
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
   self.skipWaiting();
 });
 
-// 激活阶段
+// 激活阶段 (删除旧版本的幽灵缓存)
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
